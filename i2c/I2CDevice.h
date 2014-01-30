@@ -36,7 +36,8 @@ protected:
 	int writeBuff(char *buff, int bytesNum);
 	int readBuff(char *buff, int bytesNum);
 public:
-	I2CDevice(int i2cBus, int devAddress);
+	explicit I2CDevice(unsigned int i2cBus = 0, unsigned int devAddress = 0);
+	void initI2C(int i2cBus, int devAddress);
 	virtual ~I2CDevice();
 };
 

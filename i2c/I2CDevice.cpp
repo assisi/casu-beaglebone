@@ -11,16 +11,23 @@ using namespace std;
 
 /*
  * Constructor
- * inputs: i2cbus - number of the i2c file, corresponding to the i2c bus devices are connected to (e.g. number 0 translates to file /dev/i2c-0
- * 		   devAddress - address of the device existing on the selectedi2c bus
+ * inputs: i2cbus - number of the i2c file, corresponding to the i2c bus devices are connected to, default 0 (e.g. number 0 translates to file /dev/i2c-2)
+ * 		   devAddress - address of the device existing on the selectedi2c bus, default 0x00
  */
-I2CDevice::I2CDevice(int i2cBus, int devAddress) {
+I2CDevice::I2CDevice(unsigned int i2cBus, unsigned int devAddress) {
 	this->i2cBus = i2cBus;
 	this->i2cAddress = devAddress;
 }
 
 I2CDevice::~I2CDevice() {
 }
+
+
+void I2CDevice::initI2C(int i2cBus, int devAddress) {
+	this->i2cBus = i2cBus;
+	this->i2cAddress = devAddress;
+}
+
 
 /*
  * The following methods(writeByte, readByte, readBytes) are meant to be used with typical I2C devices which use numbered registers for storing data.
