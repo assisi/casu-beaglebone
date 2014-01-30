@@ -11,41 +11,41 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
-#include "I2CSlavePIC.h"
-#include <boost/thread/recursive_mutex.hpp>
+#include "../i2c/I2CSlavePIC.h"
+#include <boost/thread/mutex.hpp>
 #include <zmq.hpp>
-#include "dev_msgs.pb.h"
+#include "../msg/dev_msgs.pb.h"
 #include "zmq_helpers.hpp"
 
 enum IR_ID {
 	IR_F = 0,
-	IR_FR,
-	IR_BR,
-	IR_B,
-	IR_BL,
-	IR_FL,
-	IR_T
+	IR_FR = 1,
+	IR_BR = 2,
+	IR_B = 3,
+	IR_BL = 4,
+	IR_FL = 5,
+	IR_T = 6
 };
 
 enum T_ID {
 	T_F = 0,
-	T_R,
-	T_B,
-	T_L,
-	T_T
+	T_R = 1,
+	T_B = 2,
+	T_L = 3,
+	T_T = 4
 };
 
 enum ACC_ID {
 	A_F = 0,
-	A_R,
-	A_B,
-	A_L,
+	A_R = 1,
+	A_B = 2,
+	A_L = 3,
 };
 
 enum LED {
 	L_R = 0,
-	L_G,
-	L_B
+	L_G = 1,
+	L_B = 2
 };
 
 #define OUT_DATA_NUM 10
@@ -64,7 +64,7 @@ public:
 private:
 
 	zmq::context_t *zmqContext;
-	boost::recursive_mutex mtxPub_, mtxRec_;
+	boost::mutex mtxPub_, mtxSub_;
 
 	char outBuff[20];
 	char inBuff[60];

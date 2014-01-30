@@ -50,12 +50,12 @@ int I2CDevice::writeByte(char regAddress, char data) {
 		sprintf(busName, "/dev/i2c-%d", i2cBus);
 		int file;
 		if ((file = open(busName, O_RDWR)) < 0){
-			cout << "Failed to open " << busName << " I2C Bus" << endl;
+			cerr << "Failed to open " << busName << " I2C Bus" << endl;
 			return 0;
 		}
 		// initialize communication
 		if (ioctl(file, I2C_SLAVE, i2cAddress) < 0){
-			cout << "i2c_SLAVE address " << i2cAddress << " failed..." << endl;
+			cerr << "i2c_SLAVE address " << i2cAddress << " failed..." << endl;
 			close(file);
 			return -1;
 		}
@@ -65,7 +65,7 @@ int I2CDevice::writeByte(char regAddress, char data) {
 		buffer[1] = data;
 
 		 if (write(file, buffer, 2) != 2) {
-			cout << "Failure to write values to I2C Device address." << endl;
+			cerr << "Failure to write values to I2C Device address." << endl;
 			close(file);
 			return -2;
 		}
@@ -92,12 +92,12 @@ int I2CDevice::writeBytes(char regAddress, char *buff, int bytesNum) {
 	sprintf(busName, "/dev/i2c-%d", i2cBus);
 	int file;
 	if ((file = open(busName, O_RDWR)) < 0){
-		cout << "Failed to open " << busName << " I2C Bus" << endl;
+		cerr << "Failed to open " << busName << " I2C Bus" << endl;
 		return 0;
 	}
 	// initialize communication
 	if (ioctl(file, I2C_SLAVE, i2cAddress) < 0){
-		cout << "i2c_SLAVE address " << i2cAddress << " failed..." << endl;
+		cerr << "i2c_SLAVE address " << i2cAddress << " failed..." << endl;
 		close(file);
 		return -1;
 	}
@@ -109,7 +109,7 @@ int I2CDevice::writeBytes(char regAddress, char *buff, int bytesNum) {
 		buffer[i] = buff[i];
 
 	if (write(file, buffer, bytesNum + 1) != (bytesNum + 1)) {
-		cout << "Failure to write bytes to I2C Device address." << endl;
+		cerr << "Failure to write bytes to I2C Device address." << endl;
 		close(file);
 		return -2;
 	}
@@ -154,12 +154,12 @@ int I2CDevice::readBytes(char regAddress, char *buff, int bytesNum) {
 	sprintf(busName, "/dev/i2c-%d", i2cBus);
 	int file;
 	if ((file = open(busName, O_RDWR)) < 0){
-		cout << "Failed to open " << busName << " I2C Bus" << endl;
+		cerr << "Failed to open " << busName << " I2C Bus" << endl;
 		return 1;
 	}
 	// initialize communication
 	if (ioctl(file, I2C_SLAVE, i2cAddress) < 0){
-		cout << "i2c_SLAVE address " << i2cAddress << " failed..." << endl;
+		cerr << "i2c_SLAVE address " << i2cAddress << " failed..." << endl;
 		close(file);
 		return 2;
 	}
@@ -167,13 +167,13 @@ int I2CDevice::readBytes(char regAddress, char *buff, int bytesNum) {
 	char buffer[1];
 	buffer[0] = regAddress;
 	if (write(file, buffer, 1) != 1) {
-		cout << "Failure to write values to I2C Device address." << endl;
+		cerr << "Failure to write values to I2C Device address." << endl;
 		close(file);
 		return 3;
 	}
 
 	if (read(file, buff, bytesNum) != bytesNum) {
-		cout << "Failure to read value from I2C Device address." << endl;
+		cerr << "Failure to read value from I2C Device address." << endl;
 		close(file);
 		return 4;
 	}
@@ -204,18 +204,18 @@ int I2CDevice::writeBuff(char *buff, int bytesNum) {
 	sprintf(busName, "/dev/i2c-%d", i2cBus);
 	int file;
 	if ((file = open(busName, O_RDWR)) < 0){
-		cout << "Failed to open " << busName << " I2C Bus" << endl;
+		cerr << "Failed to open " << busName << " I2C Bus" << endl;
 		return 0;
 	}
 	// initialize communication
 	if (ioctl(file, I2C_SLAVE, i2cAddress) < 0){
-		cout << "i2c_SLAVE address " << i2cAddress << " failed..." << endl;
+		cerr << "i2c_SLAVE address " << i2cAddress << " failed..." << endl;
 		close(file);
 		return -1;
 	}
 
 	if (write(file, buff, bytesNum) != bytesNum) {
-		cout << "Failure to write values to I2C Device address." << endl;
+		cerr << "Failure to write values to I2C Device address." << endl;
 		close(file);
 		return -2;
 	}
@@ -241,18 +241,18 @@ int I2CDevice::readBuff(char *buff, int bytesNum) {
 	sprintf(busName, "/dev/i2c-%d", i2cBus);
 	int file;
 	if ((file = open(busName, O_RDWR)) < 0){
-		cout << "Failed to open " << busName << " I2C Bus" << endl;
+		cerr << "Failed to open " << busName << " I2C Bus" << endl;
 		return 0;
 	}
 	// initialize communication
 	if (ioctl(file, I2C_SLAVE, i2cAddress) < 0){
-		cout << "i2c_SLAVE address " << i2cAddress << " failed..." << endl;
+		cerr << "i2c_SLAVE address " << i2cAddress << " failed..." << endl;
 		close(file);
 		return -1;
 	}
 
 	if (read(file, buff, bytesNum) != bytesNum) {
-		cout << "Failure to read value from I2C Device address." << endl;
+		cerr << "Failure to read value from I2C Device address." << endl;
 		close(file);
 		return -3;
 	}
