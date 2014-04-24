@@ -16,6 +16,7 @@
 #include <zmq.hpp>
 #include "../msg/dev_msgs.pb.h"
 #include "zmq_helpers.hpp"
+#include "../ehm/ehm.h"
 
 enum IR_ID {
 	IR_F = 0,
@@ -91,6 +92,8 @@ private:
 	I2CSlavePIC i2cPIC;
 
 	float vibeMotorConst;
+
+	ehm ehm_device;
 
 };
 

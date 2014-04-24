@@ -41,6 +41,8 @@ BBBInterface::BBBInterface(int bus, int picAddress) {
 	* */
 	vibeMotorConst = 0.1758;
 
+	ehm_device = ehm("/dev/ttyACM0", 9600);
+
 	gethostname(casuName, 15);
 }
 
@@ -302,6 +304,32 @@ void BBBInterface::zmqSub() {
 				else {
 					cerr << "Unknown command " << command << " for " << name << "/" << device << endl;
 				}
+			}
+			else if (device == "EM") {
+
+				printf("Received EM device message: %s", command.data());
+
+				if (command == "config") {
+					AssisiMsg::EMDeviceConfig config;
+					assert(config.ParseFromString(data));
+					if (config.mode() == AssisiMsg::EMDeviceConfig_DeviceMode_ELECTRIC) {
+						// TODO
+					}
+					else if (config.mode() == AssisiMsg::EMDeviceConfig_DeviceMode_MAGNETIC) {
+						// TODO
+					}
+					else if (config.mode() == AssisiMsg::EMDeviceConfig_DeviceMode_HEAT) {
+						ehm_device.initHeating();
+					}
+				}
+				else if (command == "temp") {
+					AssisiMsg::Temperature temp_msg;
+					assert(temp_msg.ParseFromString(data));
+
+					// for now we use temperature as a pwm duty cycle, i.e. 36° is 36% duty
+					ehm_device.setHeaterPwm((int)temp);
+				}
+
 			}
 			else
 			{
