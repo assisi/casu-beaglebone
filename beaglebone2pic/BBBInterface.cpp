@@ -21,13 +21,27 @@ BBBInterface::BBBInterface(int bus, int picAddress) {
 	ledCtl_r[L_G] = 0;
 	ledCtl_r[L_B] = 0;
 
-	irRawVals[IR_F] = 2000;
-	irRawVals[IR_FR] = 2500;
-	irRawVals[IR_BL] = 3000;
-	irRawVals[IR_B] = 3500;
-	irRawVals[IR_BL] = 4000;
-	irRawVals[IR_FL] = 4500;
-	irRawVals[IR_T] = 5000;
+	irRawVals[IR_F] = 0;
+	irRawVals[IR_FR] = 0;
+	irRawVals[IR_BR] = 0;
+	irRawVals[IR_B] = 0;
+	irRawVals[IR_BL] = 0;
+	irRawVals[IR_FL] = 0;
+	irRawVals[IR_T] = 0;
+
+	pwmMotor_r = 0;
+
+	proxyThresh = 4000;
+
+	/*Scale freq to motor pwm
+	 * From datasheet 3V > 516 Hz
+	 * u = K * f; K = 3 / 516 = 0.0058
+	 * pwm = u / 3.3 * 100 = 30.303
+	 * pwm = k2 * f = 0.0058*30.303 = 0.1758
+	* */
+	vibeMotorConst = 0.1758;
+
+	gethostname(casuName, 15);
 }
 
 BBBInterface::~BBBInterface() {
@@ -156,7 +170,6 @@ void BBBInterface::i2cComm() {
 		outBuff[0] = (tmp & 0x00FF);
 		outBuff[1] = (tmp & 0xFF00) >> 8;
 
-		pwmMotor_r = 5;
 		outBuff[2] = pwmMotor_r & 0x00FF;
 		outBuff[3] = (pwmMotor_r & 0xFF00) >> 8;
 
@@ -177,19 +190,25 @@ void BBBInterface::zmqPub() {
 
 	zmq::socket_t zmqPub(*zmqContext, ZMQ_PUB);
 	zmqPub.bind("tcp://*:5555");
-
+	int range;
+	cout << "Starting pub server: " << casuName;
 	while (1) {
 
 		std::string data;
 		AssisiMsg::RangeArray ranges;
 		this->mtxPub_.lock();
 		for(int i = 0; i < 6; i++) {
-			ranges.add_range(irRawVals[i]);
-			//ranges.add_raw_value(irRawVals[i]);
+			if (irRawVals[i] > proxyThresh)
+				range = 1;
+			else
+				range = 10;
+			ranges.add_range(range);
+			ranges.add_raw_value(irRawVals[i]);
+
 		}
 		this->mtxPub_.unlock();
 		ranges.SerializeToString(&data);
-		zmq::send_multipart(zmqPub, "Casu", "IR", "Ranges", data);
+		zmq::send_multipart(zmqPub, casuName, "IR", "Ranges", data);
 		usleep(250000);
 
 	}
@@ -200,16 +219,17 @@ void BBBInterface::zmqSub() {
 	zmq::socket_t zmqSub(*zmqContext, ZMQ_SUB);
 	zmqSub.bind("tcp://*:5556");
 	//zmqSub.connect("tcp://127.0.0.1:5556");
-	zmqSub.setsockopt(ZMQ_SUBSCRIBE, "Casu", 4);
+	zmqSub.setsockopt(ZMQ_SUBSCRIBE, casuName, 4);
 
 	string name;
 	string device;
 	string command;
 	string data;
 	int len;
+	cout << "Starting sub server: " << casuName;
 
 	while (1) {
-		len = zmq::recv_multipart(zmqSub,name, device, command, data);
+		len = zmq::recv_multipart(zmqSub, name, device, command, data);
 
 		if (len >= 0) {
 
@@ -220,9 +240,9 @@ void BBBInterface::zmqSub() {
 					AssisiMsg::ColorStamped color_msg;
 					assert(color_msg.ParseFromString(data));
 					mtxSub_.lock();
-					ledDiag_r[L_R] = color_msg.color().red();
-					ledDiag_r[L_G] = color_msg.color().green();
-					ledDiag_r[L_B] = color_msg.color().blue();
+					ledDiag_r[L_R] = 100 * color_msg.color().red();
+					ledDiag_r[L_G] = 100 * color_msg.color().green();
+					ledDiag_r[L_B] = 100 * color_msg.color().blue();
 					mtxSub_.unlock();
 				}
 				else if (command == "Off")
@@ -238,28 +258,48 @@ void BBBInterface::zmqSub() {
 					cerr << "Unknown command for " << name << "/" << device << endl;
 				}
 			}
-			else if (device == "Light")
-			{
-				if (command == "On")
-				{
+
+			else if (device == "Light") {
+
+				if (command == "On") {
 					AssisiMsg::ColorStamped color_msg;
 					assert(color_msg.ParseFromString(data));
 					mtxSub_.lock();
-					ledCtl_r[L_R] = color_msg.color().red();
-					ledCtl_r[L_G] = color_msg.color().green();
-					ledCtl_r[L_B] = color_msg.color().blue();
+					ledCtl_r[L_R] = 100 * color_msg.color().red();
+					ledCtl_r[L_G] = 100 * color_msg.color().green();
+					ledCtl_r[L_B] = 100 * color_msg.color().blue();
 					mtxSub_.unlock();
-				 }
-				else if (command == "Off")
-				{
+				}
+				else if (command == "Off") {
 					mtxSub_.lock();
 					ledCtl_r[L_R] = 0;
 					ledCtl_r[L_G] = 0;
 					ledCtl_r[L_B] = 0;
 					mtxSub_.unlock();
 				 }
-				else
-				{
+				else {
+					cerr << "Unknown command " << command << " for " << name << "/" << device << endl;
+				}
+			}
+
+			else if (device == "VibeMotor") {
+
+				printf("Received vibe command: %s", command.data());
+
+				if (command == "On") {
+
+					AssisiMsg::Vibration vibe;
+					assert(vibe.ParseFromString(data));
+					mtxSub_.lock();
+					pwmMotor_r = vibe.freq() * vibeMotorConst;
+					mtxSub_.unlock();
+				}
+				else if (command == "Off") {
+					mtxSub_.lock();
+					pwmMotor_r = 0;
+					mtxSub_.unlock();
+				}
+				else {
 					cerr << "Unknown command " << command << " for " << name << "/" << device << endl;
 				}
 			}

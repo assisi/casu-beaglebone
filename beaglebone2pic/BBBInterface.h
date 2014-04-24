@@ -85,7 +85,12 @@ private:
 	int ctlPeltier_r;
 	int pwmMotor_r;
 
+	int proxyThresh;
+	int nameLen;
+	char casuName[15];
 	I2CSlavePIC i2cPIC;
+
+	float vibeMotorConst;
 
 };
 
