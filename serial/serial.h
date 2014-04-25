@@ -20,7 +20,6 @@
 class Serial {
 public:
 
-
 	Serial(char *port, unsigned long baudRate);
 	virtual ~Serial();
 	int Open();

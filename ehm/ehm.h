@@ -16,8 +16,8 @@
 #define MODULE_OFF "000a"
 #define V40_ON	"001c"
 #define V40_OFF	"000c"
-#define LFM_ON "008a"
-#define LFM_OFF "009a"
+#define LFM_ON "009a"
+#define LFM_OFF "008a"
 #define TIMER_ON "001d"
 #define TIMER_OFF "000d"
 #define SOUND_ON "001f"
@@ -35,13 +35,15 @@
 
 class ehm : Serial {
 public:
-	ehm();
 	ehm(char *port, int baudRate);
 	int readParams();
 	int initHeating();
 	int initEField();
 	int initMField();
 	int setHeaterPwm(int dutyCycle);
+	int setMFieldFreq(int freq);
+	int setEFieldFreq(int freq);
+	int moduleOff();
 	virtual ~ehm();
 };
 

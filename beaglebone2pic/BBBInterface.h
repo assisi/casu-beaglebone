@@ -93,7 +93,7 @@ private:
 
 	float vibeMotorConst;
 
-	ehm ehm_device;
+	ehm *ehm_device;
 
 };
 

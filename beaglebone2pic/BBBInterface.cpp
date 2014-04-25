@@ -9,7 +9,8 @@
 
 using namespace std;
 
-BBBInterface::BBBInterface(int bus, int picAddress) {
+BBBInterface::BBBInterface(int bus, int picAddress)
+	{
 
 	i2cPIC.initI2C(bus, picAddress);
 	zmqContext = new zmq::context_t(2);
@@ -29,9 +30,29 @@ BBBInterface::BBBInterface(int bus, int picAddress) {
 	irRawVals[IR_FL] = 0;
 	irRawVals[IR_T] = 0;
 
+	temp[0] = 100;
+	temp[1] = 101;
+	temp[2] = 102;
+	temp[3] = 103;
+	temp[4] = 104;
+
+	vAmp[0] = 0.1;
+	vAmp[1] = 0.2;
+	vAmp[2] = 0.3;
+	vAmp[3] = 0.4;
+
+	vFreq[0] = 10;
+	vFreq[1] = 20;
+	vFreq[2] = 30;
+	vFreq[3] = 40;
+
 	pwmMotor_r = 0;
 
+	temp_r = 0;
+
 	proxyThresh = 4000;
+
+	ehm_device = new ehm("/dev/ttyACM0", 9600);
 
 	/*Scale freq to motor pwm
 	 * From datasheet 3V > 516 Hz
@@ -41,17 +62,16 @@ BBBInterface::BBBInterface(int bus, int picAddress) {
 	* */
 	vibeMotorConst = 0.1758;
 
-	ehm_device = ehm("/dev/ttyACM0", 9600);
-
 	gethostname(casuName, 15);
 }
 
 BBBInterface::~BBBInterface() {
+	delete ehm_device;
 	delete zmqContext;
 }
 
 void BBBInterface::i2cComm() {
-
+	int print_counter = 0 ;
 	while(1) {
 		status = i2cPIC.receiveData(inBuff, IN_DATA_NUM);
 
@@ -61,7 +81,7 @@ void BBBInterface::i2cComm() {
 		}
 		else {
 
-			cout << "Read bytes: " << IN_DATA_NUM << std::endl;
+			//cout << "Read bytes: " << IN_DATA_NUM << std::endl;
 
 			this->mtxPub_.lock();
 			dummy = inBuff[0] | (inBuff[1] << 8);
@@ -113,6 +133,7 @@ void BBBInterface::i2cComm() {
 			irRawVals[IR_T]= inBuff[38] | (inBuff[39] << 8);
 
 			ctlPeltier_s = inBuff[40];
+			if (ctlPeltier_s > 100) ctlPeltier_s = ctlPeltier_s - 200;
 			pwmMotor_s = inBuff[41];
 
 			ledCtl_s[L_R] = inBuff[42];
@@ -124,51 +145,55 @@ void BBBInterface::i2cComm() {
 
 			this->mtxPub_.unlock();
 
-			printf("temp = ");
-			for (int i = 0; i < 5; i++) {
-				printf("%.1f ", temp[i]);
-			}
-			printf("\n");
+			print_counter++;
+			if (print_counter == 50) {
+				printf("temp = ");
+				for (int i = 0; i < 5; i++) {
+					printf("%.1f ", temp[i]);
+				}
+				printf("\n");
 
-			printf("vibeAmp = ");
-			for (int i = 0; i < 4; i++) {
-				printf("%.1f ", vAmp[i]);
-			}
-			printf("\n");
+				printf("vibeAmp = ");
+				for (int i = 0; i < 4; i++) {
+					printf("%.1f ", vAmp[i]);
+				}
+				printf("\n");
 
-			printf("vibeFreq = ");
-			for (int i = 0; i < 4; i++) {
-				printf("%d ", vFreq[i]);
-			}
-			printf("\n");
+				printf("vibeFreq = ");
+				for (int i = 0; i < 4; i++) {
+					printf("%d ", vFreq[i]);
+				}
+				printf("\n");
 
-			printf("ir raw = ");
-			for (int i = 0; i < 7; i++) {
-				printf("%d ", irRawVals[i]);
-			}
-			printf("\n");
+				printf("ir raw = ");
+				for (int i = 0; i < 7; i++) {
+					printf("%d ", irRawVals[i]);
+				}
+				printf("\n");
 
-			printf("ledCtl = ");
-			for (int i = 0; i < 3; i++) {
-				printf("%d ", ledCtl_s[i]);
-			}
-			printf("\n");
+				printf("ledCtl = ");
+				for (int i = 0; i < 3; i++) {
+					printf("%d ", ledCtl_s[i]);
+				}
+				printf("\n");
 
-			printf("ledDiag = ");
-			for (int i = 0; i < 3; i++) {
-				printf("%d ", ledDiag_s[i]);
-			}
-			printf("\n");
+				printf("ledDiag = ");
+				for (int i = 0; i < 3; i++) {
+					printf("%d ", ledDiag_s[i]);
+				}
+				printf("\n");
 
-			printf("peltier, motor = %d %d\n", ctlPeltier_s, pwmMotor_s);
-			printf("_________________________________________________________________\n\n");
+				printf("peltier, motor = %d %d\n", ctlPeltier_s, pwmMotor_s);
+				printf("_________________________________________________________________\n\n");
+				print_counter = 0;
+			}
 		}
 
 		usleep(25000);
-		temp_r = 26.0;
 		this->mtxSub_.lock();
 		int tmp = temp_r * 10;
-		if (tmp < 0) tmp = tmp + 65636;
+		if (tmp < 0) tmp = tmp + 65536;
+		//printf("Sending temperature %d \n", tmp);
 		outBuff[0] = (tmp & 0x00FF);
 		outBuff[1] = (tmp & 0xFF00) >> 8;
 
@@ -193,24 +218,68 @@ void BBBInterface::zmqPub() {
 	zmq::socket_t zmqPub(*zmqContext, ZMQ_PUB);
 	zmqPub.bind("tcp://*:5555");
 	int range;
-	cout << "Starting pub server: " << casuName;
+	cout << "Starting pub server: " << casuName << endl;
+
+	int temp_clock = 0;
+	std::string data;
+	AssisiMsg::RangeArray ranges;
+	for(int i = 0; i < 7; i++) {
+		ranges.add_range(0);
+		ranges.add_raw_value(0);
+	}
+	AssisiMsg::TemperatureArray temps;
+
+	for(int i = 0; i < 5; i++) {
+		temps.add_temp(0);
+	}
+	AssisiMsg::VibrationArray vibes;
+
+	for(int i = 0; i < 4; i++) {
+		vibes.add_amplitude(0);
+		vibes.add_freq(0);
+	}
+
 	while (1) {
 
-		std::string data;
-		AssisiMsg::RangeArray ranges;
+
 		this->mtxPub_.lock();
-		for(int i = 0; i < 6; i++) {
+		for(int i = 0; i < 7; i++) {
 			if (irRawVals[i] > proxyThresh)
 				range = 1;
 			else
 				range = 10;
-			ranges.add_range(range);
-			ranges.add_raw_value(irRawVals[i]);
+			ranges.set_range(i, range);
+			ranges.set_raw_value(i, irRawVals[i]);
 
 		}
 		this->mtxPub_.unlock();
 		ranges.SerializeToString(&data);
 		zmq::send_multipart(zmqPub, casuName, "IR", "Ranges", data);
+
+		temp_clock++;
+		if (temp_clock == 4) {
+			this->mtxPub_.lock();
+			for(int i = 0; i < 5; i++) {
+				temps.set_temp(i, temp[i]);
+			}
+			this->mtxPub_.unlock();
+			temps.SerializeToString(&data);
+			zmq::send_multipart(zmqPub, casuName, "Temp", "Temperatures", data);
+			//printf("Sending temp data %.1f %.1f %.1f %.1f %.1f \n", temps.temp(0), temps.temp(1), temps.temp(2), temps.temp(3), temps.temp(4));
+			this->mtxPub_.lock();
+			for(int i = 0; i < 4; i++) {
+				vibes.set_amplitude(i, vAmp[i]);
+				vibes.set_freq(i, vFreq[i]);
+			}
+			this->mtxPub_.unlock();
+			//printf("Sending acc data %.1f %.1f %.1f %.1f \n", vibes.amplitude(0),vibes.amplitude(1), vibes.amplitude(2), vibes.amplitude(3));
+			//printf("Sending proxy data %.1f %.1f %.1f %.1f %.1f %.1f %.1f \n", ranges.raw_value(0), ranges.raw_value(1), ranges.raw_value(2), ranges.raw_value(3), ranges.raw_value(4), ranges.raw_value(5), ranges.raw_value(6));
+
+			vibes.SerializeToString(&data);
+			zmq::send_multipart(zmqPub, casuName, "Acc", "Measurements", data);
+
+			temp_clock = 0;
+		}
 		usleep(250000);
 
 	}
@@ -228,7 +297,7 @@ void BBBInterface::zmqSub() {
 	string command;
 	string data;
 	int len;
-	cout << "Starting sub server: " << casuName;
+	cout << "Starting sub server: " << casuName << endl;
 
 	while (1) {
 		len = zmq::recv_multipart(zmqSub, name, device, command, data);
@@ -295,6 +364,7 @@ void BBBInterface::zmqSub() {
 					mtxSub_.lock();
 					pwmMotor_r = vibe.freq() * vibeMotorConst;
 					mtxSub_.unlock();
+					printf(" Frequency, pwm %f, %d \n", vibe.freq(), pwmMotor_r);
 				}
 				else if (command == "Off") {
 					mtxSub_.lock();
@@ -307,19 +377,18 @@ void BBBInterface::zmqSub() {
 			}
 			else if (device == "EM") {
 
-				printf("Received EM device message: %s", command.data());
-
+				printf("Received EM device message: %s\n", command.data());
 				if (command == "config") {
 					AssisiMsg::EMDeviceConfig config;
 					assert(config.ParseFromString(data));
 					if (config.mode() == AssisiMsg::EMDeviceConfig_DeviceMode_ELECTRIC) {
-						// TODO
+						ehm_device->initEField();
 					}
 					else if (config.mode() == AssisiMsg::EMDeviceConfig_DeviceMode_MAGNETIC) {
-						// TODO
+						ehm_device->initMField();
 					}
 					else if (config.mode() == AssisiMsg::EMDeviceConfig_DeviceMode_HEAT) {
-						ehm_device.initHeating();
+						ehm_device->initHeating();
 					}
 				}
 				else if (command == "temp") {
@@ -327,9 +396,42 @@ void BBBInterface::zmqSub() {
 					assert(temp_msg.ParseFromString(data));
 
 					// for now we use temperature as a pwm duty cycle, i.e. 36° is 36% duty
-					ehm_device.setHeaterPwm((int)temp);
+					ehm_device->setHeaterPwm((int)temp_msg.temp());
+				}
+				else if (command == "efield") {
+
+					AssisiMsg::ElectricField efield_msg;
+					assert(efield_msg.ParseFromString(data));
+
+					ehm_device->setEFieldFreq((int)efield_msg.freq());
+				}
+				else if (command == "mfield") {
+
+					AssisiMsg::MagneticField mfield_msg;
+					assert(mfield_msg.ParseFromString(data));
+
+					ehm_device->setMFieldFreq((int)mfield_msg.freq());
+				}
+				else if (command == "Off") {
+					ehm_device->moduleOff();
 				}
 
+			}
+			else if (device == "Peltier") {
+				printf("Received Peltier device message: %s\n", command.data());
+				if (command == "temp") {
+					AssisiMsg::Temperature temp_msg;
+					assert(temp_msg.ParseFromString(data));
+					mtxSub_.lock();
+					temp_r = temp_msg.temp();
+					mtxSub_.unlock();
+					printf("Reference temperature %.1f \n", temp_r);
+				}
+				else if (command == "Off") {
+					mtxSub_.lock();
+					temp_r = 0;
+					mtxSub_.unlock();
+				}
 			}
 			else
 			{
@@ -337,6 +439,8 @@ void BBBInterface::zmqSub() {
 			}
 
 		}
+
+		fflush(stdout);
 	}
 
 }

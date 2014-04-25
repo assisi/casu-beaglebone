@@ -7,22 +7,161 @@
 
 #include "ehm.h"
 
-ehm::ehm() : Serial("/dev/ttyUSB0", 9600) {
-
-}
 
 ehm::ehm(char *port, int baudRate) : Serial(port, baudRate) {
 
+	this->moduleOff();
 }
 
 int ehm::initEField() {
 
+	unsigned char data = 0;
+	char outBuff[200] = {0};
+
+	if (this->Open() <= 0) {
+		printf("Cannot open com port \n");
+		return -1;
+	}
+
+	writeBytes((unsigned char*)INIT_COMM, 4);
+	writeBytes((unsigned char*)MODULE_ON, 4);
+	usleep(DELAY);
+
+	writeBytes((unsigned char*)INIT_COMM, 4);
+	writeBytes((unsigned char*)V40_ON, 4);
+	usleep(DELAY);
+
+	// turn on low frequency modulator (lfm)
+	writeBytes((unsigned char*)INIT_COMM, 4);
+	writeBytes((unsigned char*)LFM_ON, 4);
+	usleep(DELAY);
+
+	writeBytes((unsigned char*)INIT_COMM, 4);
+	writeBytes((unsigned char*)"50000i", 6);		// low pulse lfm 500 ms
+	usleep(DELAY);
+
+	writeBytes((unsigned char*)INIT_COMM, 4);
+	writeBytes((unsigned char*)"50000q", 6);		// high pulse lfm 500 ms
+	usleep(DELAY);
+
+	data = data | E_OUTPUT | E_LFM;
+	sprintf(outBuff, "%03db", data);			// set E output and LFM on E outputs
+	writeBytes((unsigned char*)INIT_COMM, 4);
+	writeBytes((unsigned char*)outBuff, 4);
+	usleep(DELAY);
+
+	this->Close();
 
 	return 1;
 
 }
 
+int ehm::setEFieldFreq(int freq) {
+
+	if (this->Open() <= 0) {
+			printf("Cannot open com port \n");
+			return -1;
+	}
+
+	float period_half = 1.0 / freq * 1000 / 2; // in ms
+	if (freq >= 1000) {
+		printf("Warning - frequency >= 1000 Hz, setting freq = 1000 Hz\n");
+		period_half = 0.5;
+	}
+	else if (freq < 1) {
+		printf("Warning - frequency < 1 Hz, setting freq = 1 Hz\n");
+		period_half = 500;
+	}
+
+	char outBuff[200] = {0};
+
+	sprintf(outBuff, "%05di", (int)(period_half * 100));
+	writeBytes((unsigned char*)INIT_COMM, 4);
+	writeBytes((unsigned char*)outBuff, 6);		// low pulse lfm
+	usleep(DELAY);
+
+	sprintf(outBuff, "%05dq", (int)(period_half * 100));
+	writeBytes((unsigned char*)INIT_COMM, 4);
+	writeBytes((unsigned char*)outBuff, 6);		// high pulse lfm
+	usleep(DELAY);
+
+	this->Close();
+
+	return 1;
+}
+
 int ehm::initMField() {
+
+	unsigned char data = 0;
+	char outBuff[200] = {0};
+
+	if (this->Open() <= 0) {
+		printf("Cannot open com port \n");
+		return -1;
+	}
+
+	writeBytes((unsigned char*)INIT_COMM, 4);
+	writeBytes((unsigned char*)MODULE_ON, 4);
+	usleep(DELAY);
+
+	writeBytes((unsigned char*)INIT_COMM, 4);
+	writeBytes((unsigned char*)V40_ON, 4);
+	usleep(DELAY);
+
+	// turn on low frequency modulator (lfm)
+	writeBytes((unsigned char*)INIT_COMM, 4);
+	writeBytes((unsigned char*)LFM_ON, 4);
+	usleep(DELAY);
+
+	writeBytes((unsigned char*)INIT_COMM, 4);
+	writeBytes((unsigned char*)"50000i", 6);		// low pulse lfm 500 ms
+	usleep(DELAY);
+
+	writeBytes((unsigned char*)INIT_COMM, 4);
+	writeBytes((unsigned char*)"00050q", 6);		// high pulse lfm	0.5 ms  - this is the smallest value, with low pulse 500 it means it is practically turned off
+	usleep(DELAY);
+
+	data = data | L_OUTPUT | L_LFM;
+	sprintf(outBuff, "%03db", data);			// set L output and LFM on L outputs
+	writeBytes((unsigned char*)INIT_COMM, 4);
+	writeBytes((unsigned char*)outBuff, 4);
+	usleep(DELAY);
+
+	this->Close();
+
+	return 1;
+}
+
+int ehm::setMFieldFreq(int freq) {
+
+	if (this->Open() <= 0) {
+			printf("Cannot open com port \n");
+			return -1;
+	}
+
+	float period_half = 1.0 / freq * 1000 / 2; // in ms
+	if (freq >= 1000) {
+		printf("Warning - frequency >= 1000 Hz, setting freq = 1000 Hz\n");
+		period_half = 0.5;
+	}
+	else if (freq < 1) {
+		printf("Warning - frequency < 1 Hz, setting freq = 1 Hz\n");
+		period_half = 500;
+	}
+
+	char outBuff[200] = {0};
+
+	sprintf(outBuff, "%05di", (int)(period_half * 100));
+	writeBytes((unsigned char*)INIT_COMM, 4);
+	writeBytes((unsigned char*)outBuff, 6);		// low pulse lfm
+	usleep(DELAY);
+
+	sprintf(outBuff, "%05dq", (int)(period_half * 100));
+	writeBytes((unsigned char*)INIT_COMM, 4);
+	writeBytes((unsigned char*)outBuff, 6);		// high pulse lfm
+	usleep(DELAY);
+
+	this->Close();
 
 	return 1;
 }
@@ -104,6 +243,34 @@ int ehm::setHeaterPwm(int dutyCycle)  {
 	writeBytes((unsigned char*)outBuff, 6);
 	usleep(DELAY);
 	this->Close();
+	return 1;
+}
+
+int ehm::moduleOff() {
+
+	if (this->Open() <= 0) {
+			printf("Cannot open com port \n");
+			return -1;
+		}
+
+	writeBytes((unsigned char*)INIT_COMM, 4);
+	writeBytes((unsigned char*)V40_OFF, 4);
+	usleep(DELAY);
+
+	writeBytes((unsigned char*)INIT_COMM, 4);
+	writeBytes((unsigned char*)"000b", 4);
+	usleep(DELAY);
+
+	writeBytes((unsigned char*)INIT_COMM, 4);
+	writeBytes((unsigned char*)LFM_OFF, 4);
+	usleep(DELAY);
+
+	writeBytes((unsigned char*)INIT_COMM, 4);
+	writeBytes((unsigned char*)MODULE_OFF, 4);
+	usleep(DELAY);
+
+	this->Close();
+
 	return 1;
 }
 
