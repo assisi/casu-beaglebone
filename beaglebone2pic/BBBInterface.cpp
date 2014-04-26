@@ -49,6 +49,7 @@ BBBInterface::BBBInterface(int bus, int picAddress)
 	pwmMotor_r = 0;
 
 	temp_r = 0;
+	temp_ref = 27;
 
 	proxyThresh = 4000;
 
@@ -61,6 +62,21 @@ BBBInterface::BBBInterface(int bus, int picAddress)
 	 * pwm = k2 * f = 0.0058*30.303 = 0.1758
 	* */
 	vibeMotorConst = 0.1758;
+	ctlFlag = 0;
+	startFlag = 1;
+
+	Kp_t = 2;
+	Ki_t = 0.075;
+	//Kd_t = 10;
+	uOld_t = 0;
+	uiOld = 0;
+	eOld_t = 0;
+	deOld_t = 0;
+	deadZone_t = 0.25;
+	temp_old = 26;
+
+	time(&time_a);
+	time(&ctlTime);
 
 	gethostname(casuName, 15);
 }
@@ -189,6 +205,7 @@ void BBBInterface::i2cComm() {
 			}
 		}
 
+
 		usleep(25000);
 		this->mtxSub_.lock();
 		int tmp = temp_r * 10;
@@ -210,6 +227,33 @@ void BBBInterface::i2cComm() {
 		this->mtxSub_.unlock();
 		status = i2cPIC.sendData(outBuff, OUT_DATA_NUM);
 		usleep(25000);
+
+		if (startFlag) {
+			temp_old = temp[3];
+			startFlag = 0;
+		}
+		if (abs(temp[3] - temp_old) > 5) {
+			temp[3] = temp_old;
+		}
+		time(&time_a);
+
+
+		double diff_t = difftime(time_a, ctlTime);
+		if (diff_t > 0.95) {
+			if (ctlFlag) {
+				temp_r = PIDcontroller_t(temp[3]); //left sensor;
+				printf("Ctl value = %.1f \n", temp_r);
+			}
+			else {
+				temp_r = 0;
+			}
+			temp_old = temp[3];
+			time(&ctlTime);
+			//printf("Control loop period = %.1f\n", diff_t);
+		}
+
+		temp_old = temp[3];
+
 	}
 }
 
@@ -273,7 +317,7 @@ void BBBInterface::zmqPub() {
 			}
 			this->mtxPub_.unlock();
 			//printf("Sending acc data %.1f %.1f %.1f %.1f \n", vibes.amplitude(0),vibes.amplitude(1), vibes.amplitude(2), vibes.amplitude(3));
-			//printf("Sending proxy data %.1f %.1f %.1f %.1f %.1f %.1f %.1f \n", ranges.raw_value(0), ranges.raw_value(1), ranges.raw_value(2), ranges.raw_value(3), ranges.raw_value(4), ranges.raw_value(5), ranges.raw_value(6));
+			//printf("Sending proxy data %.1f %.1f %.1f %.1f %.1f %.1f %.1f \n", ranges.rif (abs(temp[3] - temp_old) > 5)) {
 
 			vibes.SerializeToString(&data);
 			zmq::send_multipart(zmqPub, casuName, "Acc", "Measurements", data);
@@ -335,6 +379,7 @@ void BBBInterface::zmqSub() {
 				if (command == "On") {
 					AssisiMsg::ColorStamped color_msg;
 					assert(color_msg.ParseFromString(data));
+
 					mtxSub_.lock();
 					ledCtl_r[L_R] = 100 * color_msg.color().red();
 					ledCtl_r[L_G] = 100 * color_msg.color().green();
@@ -423,13 +468,15 @@ void BBBInterface::zmqSub() {
 					AssisiMsg::Temperature temp_msg;
 					assert(temp_msg.ParseFromString(data));
 					mtxSub_.lock();
-					temp_r = temp_msg.temp();
+					temp_ref = temp_msg.temp();
+					ctlFlag = 1;
 					mtxSub_.unlock();
-					printf("Reference temperature %.1f \n", temp_r);
+					printf("Reference temperature %.1f \n", temp_ref);
 				}
 				else if (command == "Off") {
 					mtxSub_.lock();
-					temp_r = 0;
+					ctlFlag = 0;
+					temp_ref = 27;
 					mtxSub_.unlock();
 				}
 			}
@@ -444,4 +491,66 @@ void BBBInterface::zmqSub() {
 	}
 
 }
+
+/*
+ * Function implements PI controller for Peltier device.
+ * We use global variables for reference and measured temperature.
+ * int i - row index
+ * int j - column index
+ */
+float BBBInterface::PIDcontroller_t(float temp) {
+
+	//printf("Controler temp_ref, temp_m = %.1f %.1f \n", temp_ref, temp);
+    float e_t = temp_ref - temp;
+    float de_t = e_t - eOld_t;
+    float up = 0;
+    float ui = 0;
+    float ud = 0;
+
+    if (e_t > deadZone_t)
+        e_t = e_t - deadZone_t;
+    else if (e_t < -deadZone_t)
+        e_t = e_t + deadZone_t;
+    else
+        e_t = 0;
+
+
+    //float u  = uOld_t + Kp_t * de_t + Ki_t * e_t + Kd_t * (de_t - deOld_t);
+    if (abs(e_t) > 2) {
+    	Kp_t = 10;
+    	up = Kp_t * e_t;
+    	ui = 0;
+    	uiOld = up;
+    }
+    else {
+    	Kp_t = 2;
+    	up = Kp_t * e_t;
+        ui = uiOld + Ki_t * e_t;
+        uiOld = ui;
+    }
+
+    float u  = up + ui;
+
+    // rate limiter
+//    if (u - uOld_t  > 5)
+//        u = uOld_t + 5;
+//    else if (u - uOld_t < - 5)
+//        u = uOld_t - 5;
+
+
+    if (u > 100) {
+        u = 100;
+    	//ui = uiOld;
+    }
+    else if (u < -100) {
+        u = -100;
+        //ui = uiOld;
+    }
+    uOld_t = u;
+    eOld_t = e_t;
+    deOld_t = de_t;
+
+    return u;
+}
+
 

@@ -17,6 +17,7 @@
 #include "../msg/dev_msgs.pb.h"
 #include "zmq_helpers.hpp"
 #include "../ehm/ehm.h"
+#include <time.h>
 
 enum IR_ID {
 	IR_F = 0,
@@ -80,7 +81,7 @@ private:
 	int ctlPeltier_s;
 	int pwmMotor_s;
 
-	float temp_r;
+	float temp_r, temp_ref;
 	int ledCtl_r[3];
 	int ledDiag_r[3];
 	int ctlPeltier_r;
@@ -94,6 +95,16 @@ private:
 	float vibeMotorConst;
 
 	ehm *ehm_device;
+	time_t ctlTime, time_a;
+
+	// temp controller params
+	float uOld_t, eOld_t, deOld_t, deadZone_t, uiOld;
+	float Kp_t, Ki_t, Kd_t;
+	int ctlFlag;
+	float temp_old;
+	int startFlag;
+
+	float PIDcontroller_t(float temp);
 
 };
 
