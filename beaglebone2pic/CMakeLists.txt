@@ -1,22 +1,8 @@
-# Beaglebone 2 pic
-
-# External dependencies
-#set(ZeroMQ_INCLUDE_DIR /usr/local/include)
-#set(ZeroMQ_LIBRARY /usr/local/lib/libzmq.so)
+# Beaglebone 2 pic CMake script
 
 #set(CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_STATIC_LIBRARY_SUFFIX})
 find_library(ZeroMQ_LIBRARY zmq)
-#set(ZeroMQ_LIBRARY libzmq.so)
 find_library(Boost_LIBRARIES boost_thread)
-
-# Second order dependencies, should be handled by -rpath-link
-# http://stackoverflow.com/questions/21113434/error-cross-compiling-cpp-netlib-for-raspbian
-# or even better:
-# http://sysprogs.com/blog/?p=54
-find_library(PGM_LIBRARY pgm)
-find_library(Z_LIBRARY z)
-find_library(UUID_LIBRARY uuid)
-message("${Z_LIBRARY}")
 
 #find_package(Boost COMPONENTS thread REQUIRED)
 find_package(Protobuf REQUIRED)
@@ -48,12 +34,8 @@ set(casu_fw_SOURCES TestApp.cpp
 
 set(PROTOBUF_LIBRARY libprotobuf.so)
 
-#set(CMAKE_SKIP_BUILD_RPATH FALSE)
-#set(CMAAKE_BUILD_WITH_INSTALL_RPATH FALSE)
-#set(CMAKE_INSTALL_RPATH $ENV{HOME}/dev/bbone/lib/arm-linux-gnueabihf
-#                        $ENV{HOME}/dev/bbone/usr/lib)
-#set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-set(CMAKE_EXE_LINKER_FLAGS "-Wl,-rpath-link,/home/damjan/dev/bbone/lib/arm-linux-gnueabihf -Wl,-rpath-link,/home/damjan/dev/bbone/usr/lib")
+# Set -rpath-link linker flags, to prevent weird 2nd-order-dependency linker errors that cost me a handfll of gray hair
+set(CMAKE_EXE_LINKER_FLAGS "-Wl,-rpath-link,$ENV{CROSS_ENV_ROOT}/lib/arm-linux-gnueabihf -Wl,-rpath-link,$ENV{CROSS_ENV_ROOT}/usr/lib")
 
 add_executable(casu-fw ${casu_fw_SOURCES})
 target_link_libraries(casu-fw ${ZeroMQ_LIBRARY} ${PROTOBUF_LIBRARY} ${Boost_LIBRARIES})

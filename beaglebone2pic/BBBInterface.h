@@ -94,7 +94,12 @@ private:
 
 	float vibeMotorConst;
 
+    // EHM device
 	ehm *ehm_device;
+    int ehm_freq_electric;
+    int ehm_freq_magnetic;
+    int ehm_temp;
+
 	time_t ctlTime, time_a;
 
 	// temp controller params
