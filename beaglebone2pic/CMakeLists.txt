@@ -22,8 +22,8 @@ include_directories(${CMAKE_SOURCE_DIR}/serial
                     ${CMAKE_SOURCE_DIR}/i2c
                     ${CMAKE_SOURCE_DIR}/ehm
                     ${CMAKE_BINARY_DIR}/beaglebone2pic # This is for protobuffer stuff!
-                    ${ZeroMQ_INCLUDE_DIR})
-#                    ${CMAKE_FIND_ROOT_PATH}/usr/include)
+                    ${ZeroMQ_INCLUDE_DIR}
+                    ${CMAKE_FIND_ROOT_PATH}/usr/include/arm-linux-gnueabihf)
 
 # Casu firmware sources
 set(casu_fw_SOURCES TestApp.cpp
