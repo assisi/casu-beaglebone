@@ -5,6 +5,8 @@
  *      Author: thaus
  */
 
+#include <unistd.h>
+
 #include "ehm.h"
 
 
