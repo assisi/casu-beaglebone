@@ -48,12 +48,16 @@ BBBInterface::BBBInterface(int bus, int picAddress)
 
 	pwmMotor_r = 0;
 
-	temp_r = 0;
-	temp_ref = 27;
+	temp_r = 27;
+	temp_ref = 0;
 
 	proxyThresh = 4000;
 
+    // EHM device configuration
 	ehm_device = new ehm("/dev/ttyACM0", 9600);
+    ehm_freq_electric = 0;
+    ehm_freq_magnetic = 0;
+    ehm_temp = 0;
 
 	/*Scale freq to motor pwm
 	 * From datasheet 3V > 516 Hz
@@ -200,6 +204,10 @@ void BBBInterface::i2cComm() {
 				printf("\n");
 
 				printf("peltier, motor = %d %d\n", ctlPeltier_s, pwmMotor_s);
+
+                printf("EM electric, EM magnetic, EM heat = %d %d %d\n", ehm_freq_electric,
+                       ehm_freq_magnetic,
+                       ehm_temp);
 				printf("_________________________________________________________________\n\n");
 				print_counter = 0;
 			}
@@ -208,7 +216,8 @@ void BBBInterface::i2cComm() {
 
 		usleep(25000);
 		this->mtxSub_.lock();
-		int tmp = temp_r * 10;
+		//int tmp = temp_r * 10;
+        int tmp = temp_ref * 10;
 		if (tmp < 0) tmp = tmp + 65536;
 		//printf("Sending temperature %d \n", tmp);
 		outBuff[0] = (tmp & 0x00FF);
@@ -237,7 +246,7 @@ void BBBInterface::i2cComm() {
 		}
 		time(&time_a);
 
-
+        /*
 		double diff_t = difftime(time_a, ctlTime);
 		if (diff_t > 0.95) {
 			if (ctlFlag) {
@@ -251,6 +260,7 @@ void BBBInterface::i2cComm() {
 			time(&ctlTime);
 			//printf("Control loop period = %.1f\n", diff_t);
 		}
+        */
 
 		temp_old = temp[3];
 
@@ -441,24 +451,33 @@ void BBBInterface::zmqSub() {
 					assert(temp_msg.ParseFromString(data));
 
 					// for now we use temperature as a pwm duty cycle, i.e. 36° is 36% duty
-					ehm_device->setHeaterPwm((int)temp_msg.temp());
+                    // TODO: Check that the device is in the right mode!
+					ehm_temp = (int)temp_msg.temp();
+                    ehm_device->setHeaterPwm(ehm_temp);
 				}
 				else if (command == "efield") {
 
 					AssisiMsg::ElectricField efield_msg;
 					assert(efield_msg.ParseFromString(data));
 
-					ehm_device->setEFieldFreq((int)efield_msg.freq());
+                    // TODO: Check that the device is in the right mode!
+                    ehm_freq_electric = (int)efield_msg.freq();
+					ehm_device->setEFieldFreq(ehm_freq_electric);
 				}
 				else if (command == "mfield") {
 
 					AssisiMsg::MagneticField mfield_msg;
 					assert(mfield_msg.ParseFromString(data));
 
-					ehm_device->setMFieldFreq((int)mfield_msg.freq());
+                    // TODO: Check that the device is in the right mode!
+                    ehm_freq_magnetic = (int)mfield_msg.freq();
+					ehm_device->setMFieldFreq(ehm_freq_magnetic);
 				}
 				else if (command == "Off") {
 					ehm_device->moduleOff();
+                    ehm_temp = 0;
+                    ehm_freq_electric = 0;
+                    ehm_freq_magnetic = 0;
 				}
 
 			}
@@ -476,7 +495,7 @@ void BBBInterface::zmqSub() {
 				else if (command == "Off") {
 					mtxSub_.lock();
 					ctlFlag = 0;
-					temp_ref = 27;
+					temp_ref = 0;
 					mtxSub_.unlock();
 				}
 			}

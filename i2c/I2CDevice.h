@@ -15,14 +15,14 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <iostream>
-#include <linux/i2c.h>
+//#include <linux/i2c.h>
 #include <linux/i2c-dev.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 
-/*
+/*cmake_find_library
  * Class for communicating with devices on i2c bus. Only master mode is supported, i.e. all other devices should be configured as slaves (multi-master mode !?)
  * Specific device is meant to inherit this class and implement methods such as reading/writing different registers
  */

@@ -11,12 +11,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
-#include "../i2c/I2CSlavePIC.h"
+#include "I2CSlavePIC.h"
 #include <boost/thread/mutex.hpp>
 #include <zmq.hpp>
-#include "../msg/dev_msgs.pb.h"
+#include "dev_msgs.pb.h"
 #include "zmq_helpers.hpp"
-#include "../ehm/ehm.h"
+#include "ehm.h"
 #include <time.h>
 
 enum IR_ID {
@@ -94,7 +94,12 @@ private:
 
 	float vibeMotorConst;
 
+    // EHM device
 	ehm *ehm_device;
+    int ehm_freq_electric;
+    int ehm_freq_magnetic;
+    int ehm_temp;
+
 	time_t ctlTime, time_a;
 
 	// temp controller params
