@@ -37,6 +37,10 @@ int ehm::initEField() {
 	usleep(DELAY);
 
 	writeBytes((unsigned char*)INIT_COMM, 4);
+	writeBytes((unsigned char*)"021j", 4);		// e voltage , value 21 corresponds to 1000 V
+	usleep(DELAY);
+
+	writeBytes((unsigned char*)INIT_COMM, 4);
 	writeBytes((unsigned char*)"50000i", 6);		// low pulse lfm 500 ms
 	usleep(DELAY);
 
