@@ -114,6 +114,14 @@ int ehm::initMField() {
 	usleep(DELAY);
 
 	writeBytes((unsigned char*)INIT_COMM, 4);
+	writeBytes((unsigned char*)"00200e", 6);		// period for high freqeuncy modulator (pwm) - 200 us
+	usleep(DELAY);
+
+	writeBytes((unsigned char*)INIT_COMM, 4);
+	writeBytes((unsigned char*)"00010n", 6);		// high duration for high freqeuncy modulator (pwm) - 10 us
+	usleep(DELAY);
+
+	writeBytes((unsigned char*)INIT_COMM, 4);
 	writeBytes((unsigned char*)"50000i", 6);		// low pulse lfm 500 ms
 	usleep(DELAY);
 
@@ -139,24 +147,24 @@ int ehm::setMFieldFreq(int freq) {
 			return -1;
 	}
 
-	float period_half = 1.0 / freq * 1000 / 2; // in ms
+	float period = 1.0 / freq * 1000; // in ms
 	if (freq >= 1000) {
 		printf("Warning - frequency >= 1000 Hz, setting freq = 1000 Hz\n");
-		period_half = 0.5;
+		period = 1;
 	}
 	else if (freq < 1) {
 		printf("Warning - frequency < 1 Hz, setting freq = 1 Hz\n");
-		period_half = 500;
+		period = 1000;
 	}
 
 	char outBuff[200] = {0};
 
-	sprintf(outBuff, "%05di", (int)(period_half * 100));
+	sprintf(outBuff, "%05di", (int)(0.6 * period * 100));		// 60% low duration ,40 high
 	writeBytes((unsigned char*)INIT_COMM, 4);
 	writeBytes((unsigned char*)outBuff, 6);		// low pulse lfm
 	usleep(DELAY);
 
-	sprintf(outBuff, "%05dq", (int)(period_half * 100));
+	sprintf(outBuff, "%05dq", (int)(0.4 * period * 100)); // 60% low duration ,40 high
 	writeBytes((unsigned char*)INIT_COMM, 4);
 	writeBytes((unsigned char*)outBuff, 6);		// high pulse lfm
 	usleep(DELAY);
