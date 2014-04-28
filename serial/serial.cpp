@@ -5,6 +5,15 @@
  *      Author: thaus
  */
 
+#include <stdio.h>
+#include <iostream>
+#include <string.h>
+#include <fcntl.h>   /* File control definitions: open */
+#include <unistd.h>  /* File control definitins: close */  
+#include <errno.h>   /* Error number definitions */
+#include <termios.h> /* POSIX terminal control definitions */
+#include <termio.h>
+
 #include "serial.h"
 
 using namespace std;
