@@ -5,11 +5,11 @@
  *      Author: thaus
  */
 
-#include "BBBInterface.h"
+#include "CASU_Interface.h"
 
 using namespace std;
 
-BBBInterface::BBBInterface(int bus, int picAddress)
+CASU_Interface::CASU_Interface(int bus, int picAddress)
 	{
 
 	i2cPIC.initI2C(bus, picAddress);
@@ -41,21 +41,24 @@ BBBInterface::BBBInterface(int bus, int picAddress)
 	vAmp[2] = 0.3;
 	vAmp[3] = 0.4;
 
-	vFreq[0] = 10;
-	vFreq[1] = 20;
-	vFreq[2] = 30;
-	vFreq[3] = 40;
+	vFreq[0] = 10.0;
+	vFreq[1] = 20.0;
+	vFreq[2] = 30.0;
+	vFreq[3] = 40.0;
 
 	pwmMotor_r = 0;
 
-	temp_r = 27;
+	temp_r = 0;
 	temp_ref = 0;
+	temp_ref_old = 0;
+	// 1°c in 5 s, loop is on 0.05 s
+	temp_rate = 0.01;
 
 	proxyThresh = 4000;
 
     // EHM device configuration
 	ehm_device = new ehm("/dev/ttyACM0", 9600);
-    ehm_freq_electric = 0;
+	ehm_freq_electric = 0;
     ehm_freq_magnetic = 0;
     ehm_temp = 0;
 
@@ -79,19 +82,27 @@ BBBInterface::BBBInterface(int bus, int picAddress)
 	deadZone_t = 0.25;
 	temp_old = 26;
 
+	log_file.open("log/log.txt", ios::out);
 	time(&time_a);
 	time(&ctlTime);
 
 	gethostname(casuName, 15);
 }
 
-BBBInterface::~BBBInterface() {
+CASU_Interface::~CASU_Interface() {
+	log_file.close();
 	delete ehm_device;
 	delete zmqContext;
 }
 
-void BBBInterface::i2cComm() {
+void CASU_Interface::i2cComm() {
 	int print_counter = 0 ;
+	char str_buff[256] = {0};
+	std::stringstream ss;
+	gettimeofday(&start_time, NULL);
+	timeval current_time;
+	sprintf(str_buff, "time temp_f temp_r temp_l temp_b temp_top temp_ref pelt mot \n");
+	log_file.write(str_buff, strlen(str_buff));
 	while(1) {
 		status = i2cPIC.receiveData(inBuff, IN_DATA_NUM);
 
@@ -139,10 +150,10 @@ void BBBInterface::i2cComm() {
 			vAmp[A_B] = (inBuff[14] | (inBuff[15] << 8)) / 10.0;
 			vAmp[A_L] = (inBuff[16] | (inBuff[17] << 8)) / 10.0;
 
-			vFreq[A_F] = inBuff[18] | (inBuff[19] << 8);
-			vFreq[A_R] = inBuff[20] | (inBuff[21] << 8);
-			vFreq[A_B] = inBuff[22] | (inBuff[23] << 8);
-			vFreq[A_L] = inBuff[24] | (inBuff[25] << 8);
+			vFreq[A_F] = (inBuff[18] | (inBuff[19] << 8)) / 10.0;
+			vFreq[A_R] = (inBuff[20] | (inBuff[21] << 8)) / 10.0;
+			vFreq[A_B] = (inBuff[22] | (inBuff[23] << 8)) / 10.0;
+			vFreq[A_L] = (inBuff[24] | (inBuff[25] << 8)) / 10.0;
 
 			irRawVals[IR_F] = inBuff[26] | (inBuff[27] << 8);
 			irRawVals[IR_FR] = inBuff[28] | (inBuff[29] << 8);
@@ -164,9 +175,13 @@ void BBBInterface::i2cComm() {
 			ledDiag_s[L_B] = inBuff[47];
 
 			this->mtxPub_.unlock();
-
+			gettimeofday(&current_time, NULL);
+			double t_msec = (current_time.tv_sec - start_time.tv_sec) * 1000 + (current_time.tv_usec - start_time.tv_usec)/1000;
+			sprintf(str_buff, "%.2f %.1f %.1f %.1f %.1f %.1f %.1f %d %d \n", t_msec / 1000, temp[T_F], temp[T_R], temp[T_L], temp[T_B], temp[T_T], temp_ref, ctlPeltier_s, pwmMotor_s);
+			log_file.write(str_buff, strlen(str_buff));
+			log_file.flush();
 			print_counter++;
-			if (print_counter == 50) {
+			if (print_counter == 20) {
 				printf("temp = ");
 				for (int i = 0; i < 5; i++) {
 					printf("%.1f ", temp[i]);
@@ -181,7 +196,7 @@ void BBBInterface::i2cComm() {
 
 				printf("vibeFreq = ");
 				for (int i = 0; i < 4; i++) {
-					printf("%d ", vFreq[i]);
+					printf("%.1f ", vFreq[i]);
 				}
 				printf("\n");
 
@@ -214,10 +229,13 @@ void BBBInterface::i2cComm() {
 		}
 
 
-		usleep(25000);
+		//usleep(150000);
 		this->mtxSub_.lock();
 		//int tmp = temp_r * 10;
-        int tmp = temp_ref * 10;
+		//temp_rate_filter();
+        //int tmp = temp_ref * 10;
+		//if (tmp < 0) tmp = tmp + 65536;
+		int tmp = temp_ref * 10;
 		if (tmp < 0) tmp = tmp + 65536;
 		//printf("Sending temperature %d \n", tmp);
 		outBuff[0] = (tmp & 0x00FF);
@@ -235,7 +253,7 @@ void BBBInterface::i2cComm() {
 		outBuff[9] = ledDiag_r[2];
 		this->mtxSub_.unlock();
 		status = i2cPIC.sendData(outBuff, OUT_DATA_NUM);
-		usleep(25000);
+		//usleep(150000);
 
 		if (startFlag) {
 			temp_old = temp[3];
@@ -267,7 +285,7 @@ void BBBInterface::i2cComm() {
 	}
 }
 
-void BBBInterface::zmqPub() {
+void CASU_Interface::zmqPub() {
 
 	zmq::socket_t zmqPub(*zmqContext, ZMQ_PUB);
 	zmqPub.bind("tcp://*:5555");
@@ -286,12 +304,7 @@ void BBBInterface::zmqPub() {
 	for(int i = 0; i < 5; i++) {
 		temps.add_temp(0);
 	}
-	AssisiMsg::VibrationArray vibes;
 
-	for(int i = 0; i < 4; i++) {
-		vibes.add_amplitude(0);
-		vibes.add_freq(0);
-	}
 
 	while (1) {
 
@@ -320,11 +333,17 @@ void BBBInterface::zmqPub() {
 			temps.SerializeToString(&data);
 			zmq::send_multipart(zmqPub, casuName, "Temp", "Temperatures", data);
 			//printf("Sending temp data %.1f %.1f %.1f %.1f %.1f \n", temps.temp(0), temps.temp(1), temps.temp(2), temps.temp(3), temps.temp(4));
+
+			AssisiMsg::VibrationReadingArray vibes;
+			AssisiMsg::VibrationReading *vibe;
 			this->mtxPub_.lock();
+
 			for(int i = 0; i < 4; i++) {
-				vibes.set_amplitude(i, vAmp[i]);
-				vibes.set_freq(i, vFreq[i]);
+				vibe = vibes.add_reading();
+				vibe->add_amplitude(vAmp[i]);
+				vibe->add_freq(vFreq[i]);
 			}
+
 			this->mtxPub_.unlock();
 			//printf("Sending acc data %.1f %.1f %.1f %.1f \n", vibes.amplitude(0),vibes.amplitude(1), vibes.amplitude(2), vibes.amplitude(3));
 			//printf("Sending proxy data %.1f %.1f %.1f %.1f %.1f %.1f %.1f \n", ranges.rif (abs(temp[3] - temp_old) > 5)) {
@@ -339,7 +358,7 @@ void BBBInterface::zmqPub() {
 	}
 }
 
-void BBBInterface::zmqSub() {
+void CASU_Interface::zmqSub() {
 
 	zmq::socket_t zmqSub(*zmqContext, ZMQ_SUB);
 	zmqSub.bind("tcp://*:5556");
@@ -414,7 +433,7 @@ void BBBInterface::zmqSub() {
 
 				if (command == "On") {
 
-					AssisiMsg::Vibration vibe;
+					AssisiMsg::VibrationSetpoint vibe;
 					assert(vibe.ParseFromString(data));
 					mtxSub_.lock();
 					pwmMotor_r = vibe.freq() * vibeMotorConst;
@@ -517,7 +536,7 @@ void BBBInterface::zmqSub() {
  * int i - row index
  * int j - column index
  */
-float BBBInterface::PIDcontroller_t(float temp) {
+float CASU_Interface::PIDcontroller_t(float temp) {
 
 	//printf("Controler temp_ref, temp_m = %.1f %.1f \n", temp_ref, temp);
     float e_t = temp_ref - temp;
@@ -572,4 +591,16 @@ float BBBInterface::PIDcontroller_t(float temp) {
     return u;
 }
 
+void CASU_Interface::temp_rate_filter() {
+	if (temp_ref - temp_ref_old > temp_rate) {
+		temp_r = temp_ref_old + temp_rate;
+	}
+	else if (temp_ref - temp_ref_old < -temp_rate) {
+		temp_r = temp_ref_old - temp_rate;
+	}
+	else
+		temp_r = temp_ref;
+
+	temp_ref_old = temp_r;
+}
 

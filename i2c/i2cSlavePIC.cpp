@@ -5,7 +5,9 @@
  *      Author: thaus
  */
 
-#include "I2CSlavePIC.h"
+#include "i2cSlavePIC.h"
+
+using namespace std;
 
 /*
  * Constructor
@@ -30,8 +32,16 @@ I2CSlavePIC::~I2CSlavePIC() {
  */
 int I2CSlavePIC::sendData(char *buff, int bytesNum) {
 
-	int status;
-	status = writeBuff(buff, bytesNum);
+	int status = -1;
+	int count = 0;
+	while (status < 0) {
+		status = writeBuff(buff, bytesNum);
+		count++;
+		if (count == 1000) {
+			cerr << "Waiting for outgoing data" << endl;
+			count = 0;
+		}
+	}
 	return status;
 }
 
@@ -46,8 +56,16 @@ int I2CSlavePIC::sendData(char *buff, int bytesNum) {
  */
 int I2CSlavePIC::receiveData(char *buff, int bytesNum) {
 
-	int status;
-	status = readBuff(buff, bytesNum);
+	int status = -1;
+	int count  = 0;
+	while (status < 0) {
+		status = readBuff(buff, bytesNum);
+		count++;
+		if (count == 1000) {
+			cerr << "Waiting for incoming data" << endl;
+			count = 0;
+		}
+	}
 	return status;
 }
 

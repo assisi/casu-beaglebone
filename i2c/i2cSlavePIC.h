@@ -8,7 +8,7 @@
 #ifndef I2CSLAVEPIC_H_
 #define I2CSLAVEPIC_H_
 
-#include "I2CDevice.h"
+#include "i2cDevice.h"
 
 
 class I2CSlavePIC : public I2CDevice {
