@@ -94,9 +94,7 @@ int Serial::Open() {
 
 int Serial::Close() {
 
-	close(fp);
-
-	return 1;
+	return close(fp) + 1;
 }
 
 

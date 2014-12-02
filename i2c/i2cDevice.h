@@ -27,7 +27,7 @@
  * Only master mode is supported, i.e. all other devices should be configured as slaves.
  * Typical usage with single-board computers such as Beaglebone, RaspberryPI, Odroid etc.
  */
-class I2CDevice {
+class I2C_Device {
 
 public:
 
@@ -38,11 +38,11 @@ public:
 	 * @param i2cbus Number of the i2c file, default 0 which translates to file /dev/i2c-0)
 	 * @param i2cAddress Address of the device existing on the selected i2c bus, default 0x00
 	 */
-	explicit I2CDevice(unsigned int i2cBus = 0, unsigned int i2cAddress = 0);
+	explicit I2C_Device(unsigned int i2cBus = 0, unsigned int i2cAddress = 0);
 
 	/*! Destructor.
 	 */
-	virtual ~I2CDevice();
+	virtual ~I2C_Device();
 
 	/*! \brief Initializes i2c device bus and address.
 	 *
@@ -57,9 +57,9 @@ protected:
 	 *
 	 * @param regAddress Address of the i2c device register.
 	 * @param data Data byte to be written.
-	 * @return: 1 - byte successfully sent
-	 * 			0 - failed to open i2c bus
-	 * 		   -1 - failed to initialize communication with i2c slave device
+	 * @return: 1 - byte successfully sent \n
+	 * 			0 - failed to open i2c bus \n
+	 * 		   -1 - failed to initialize communication with i2c slave device \n
 	 * 		   -2 - failed to write byte to i2c slave device
 	 */
 	int writeByte(char regAddress, char data);
@@ -69,9 +69,9 @@ protected:
 	 * @param regAddress Address of the register on the i2c device.
 	 * @param buff Pointer to the memory location containing bytes to be written.
 	 * @param byteNum Number of byte to write.
-	 * @return: 1 - bytes successfully sent
-	 * 			0 - failed to open i2c bus
-	 * 		   -1 - failed to initialize communication with i2c slave device
+	 * @return: 1 - bytes successfully sent \n
+	 * 			0 - failed to open i2c bus \n
+	 * 		   -1 - failed to initialize communication with i2c slave device \n
 	 * 		   -2 - failed to write byte to i2c slave device
 	 */
 	int writeBytes(char regAddress, char *buff, int bytesNum);
@@ -80,10 +80,10 @@ protected:
 	 *
 	 * @param regAddress Address of the i2c device register.
 	 * @param data Pointer to a memory location where the incoming byte should be saved.
-	 * @return: 1 - byte successfully read
-	 * 			0 - failed to open i2c bus
-	 * 		   -1 - failed to initialize communication with i2c slave device
-	 * 		   -2 - failed to write byte to i2c slave device (register address)
+	 * @return: 1 - byte successfully read \n
+	 * 			0 - failed to open i2c bus \n
+	 * 		   -1 - failed to initialize communication with i2c slave device \n
+	 * 		   -2 - failed to write byte to i2c slave device (register address) \n
 	 * 		   -3 - failed to read byte from i2c slave device
 	 */
 	int readByte(char regAddress, char *data);
@@ -93,10 +93,10 @@ protected:
 	 * @param regAddress Address of the register on the i2c device.
 	 * @param buff Pointer to a memory where the incoming bytes should be saved.
 	 * @param bytesNum Number of bytes to read.
-	 * @return  1 - byte successfully read
-	 * 			0 - failed to open i2c bus
-	 * 		   -1 - failed to initialize communication with i2c slave device
-	 * 		   -2 - failed to write byte to i2c slave device (register address)
+	 * @return  1 - byte successfully read \n
+	 * 			0 - failed to open i2c bus \n
+	 * 		   -1 - failed to initialize communication with i2c slave device \n
+	 * 		   -2 - failed to write byte to i2c slave device (register address) \n
 	 *		   -3 - failed to read bytes from i2c slave device
 	 */
 	int readBytes(char regAddress, char *buff, int bytesNum);
@@ -105,9 +105,9 @@ protected:
 	 *
 	 * @param buff Pointer to the memory location containing bytes to be written.
 	 * @param byteNum Number of bytes to write.
-	 * @return: 1 - bytes successfully sent
-	 * 			0 - failed to open i2c bus
-	 * 		   -1 - failed to initialize communication with i2c slave device
+	 * @return: 1 - bytes successfully sent \n
+	 * 			0 - failed to open i2c bus \n
+	 * 		   -1 - failed to initialize communication with i2c slave device \n
 	 * 		   -2 - failed to write byte to i2c slave device
 	 */
 	int writeBuff(char *buff, int bytesNum);
@@ -116,9 +116,9 @@ protected:
 	 *
 	 * @param buff Pointer to the memory location where the incoming bytes should be saved.
 	 * @param byteNum Number of bytes to read.
-	 * @return: 1 - bytes successfully sent
-	 * 			0 - failed to open i2c bus
-	 * 		   -1 - failed to initialize communication with i2c slave device
+	 * @return: 1 - bytes successfully sent \n
+	 * 			0 - failed to open i2c bus \n
+	 * 		   -1 - failed to initialize communication with i2c slave device \n
 	 * 		   -3 - failed to read bytes from i2c slave device
 	 */
 	int readBuff(char *buff, int bytesNum);

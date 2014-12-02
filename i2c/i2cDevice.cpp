@@ -9,15 +9,15 @@
 
 using namespace std;
 
-I2CDevice::I2CDevice(unsigned int i2cBus, unsigned int devAddress) {
+I2C_Device::I2C_Device(unsigned int i2cBus, unsigned int devAddress) {
 	this->i2cBus = i2cBus;
 	this->i2cAddress = devAddress;
 }
 
-I2CDevice::~I2CDevice() {
+I2C_Device::~I2C_Device() {
 }
 
-void I2CDevice::initI2C(int i2cBus, int devAddress) {
+void I2C_Device::initI2C(int i2cBus, int devAddress) {
 	this->i2cBus = i2cBus;
 	this->i2cAddress = devAddress;
 }
@@ -28,7 +28,7 @@ void I2CDevice::initI2C(int i2cBus, int devAddress) {
  * First the address of the device is sent, second the device's internal register address is sent and finally data byte(s) is read or written
  */
 
-int I2CDevice::writeByte(char regAddress, char data) {
+int I2C_Device::writeByte(char regAddress, char data) {
 
 		// open the i2c address
 		char busName[bufferSize];
@@ -60,7 +60,7 @@ int I2CDevice::writeByte(char regAddress, char data) {
 		return 1;
 }
 
-int I2CDevice::writeBytes(char regAddress, char *buff, int bytesNum) {
+int I2C_Device::writeBytes(char regAddress, char *buff, int bytesNum) {
 
 	// open the i2c address
 	char busName[bufferSize];
@@ -94,7 +94,7 @@ int I2CDevice::writeBytes(char regAddress, char *buff, int bytesNum) {
 	return 1;
 }
 
-int I2CDevice::readByte(char regAddress, char *data) {
+int I2C_Device::readByte(char regAddress, char *data) {
 	char buff[1];
 	int status = readBytes(regAddress, buff, 1);
 	if ( status > 0){
@@ -103,7 +103,7 @@ int I2CDevice::readByte(char regAddress, char *data) {
 	return status;
 }
 
-int I2CDevice::readBytes(char regAddress, char *buff, int bytesNum) {
+int I2C_Device::readBytes(char regAddress, char *buff, int bytesNum) {
 
 	// open the i2c address
 	char busName[bufferSize];
@@ -144,7 +144,7 @@ int I2CDevice::readBytes(char regAddress, char *buff, int bytesNum) {
  *
  */
 
-int I2CDevice::writeBuff(char *buff, int bytesNum) {
+int I2C_Device::writeBuff(char *buff, int bytesNum) {
 
 	// open the i2c address
 	char busName[bufferSize];
@@ -172,7 +172,7 @@ int I2CDevice::writeBuff(char *buff, int bytesNum) {
 	return 1;
 }
 
-int I2CDevice::readBuff(char *buff, int bytesNum) {
+int I2C_Device::readBuff(char *buff, int bytesNum) {
 
 	// open the i2c address
 	char busName[bufferSize];

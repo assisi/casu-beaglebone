@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
-#include "i2cSlavePIC.h"
+#include "i2cSlaveMCU.h"
 #include <boost/thread/mutex.hpp>
 #include <zmq.hpp>
 #include "dev_msgs.pb.h"
@@ -133,7 +133,7 @@ private:
 	int proxyThresh;
 	int nameLen;
 	char casuName[15];
-	I2CSlavePIC i2cPIC;
+	I2C_SlaveMCU i2cPIC;
 
 	float vibeMotorConst;
 
