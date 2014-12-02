@@ -48,16 +48,12 @@ CASU_Interface::CASU_Interface(int bus, int picAddress)
 
 	pwmMotor_r = 0;
 
-	temp_r = 0;
 	temp_ref = 0;
-	temp_ref_old = 0;
-	// 1°c in 5 s, loop is on 0.05 s
-	temp_rate = 0.01;
 
 	proxyThresh = 4000;
 
     // EHM device configuration
-	ehm_device = new ehm("/dev/ttyACM0", 9600);
+	ehm_device = new EHM("/dev/ttyACM0", 9600);
 	ehm_freq_electric = 0;
     ehm_freq_magnetic = 0;
     ehm_temp = 0;
@@ -69,22 +65,8 @@ CASU_Interface::CASU_Interface(int bus, int picAddress)
 	 * pwm = k2 * f = 0.0058*30.303 = 0.1758
 	* */
 	vibeMotorConst = 0.1758;
-	ctlFlag = 0;
-	startFlag = 1;
-
-	Kp_t = 2;
-	Ki_t = 0.075;
-	//Kd_t = 10;
-	uOld_t = 0;
-	uiOld = 0;
-	eOld_t = 0;
-	deOld_t = 0;
-	deadZone_t = 0.25;
-	temp_old = 26;
 
 	log_file.open("log/log.txt", ios::out);
-	time(&time_a);
-	time(&ctlTime);
 
 	gethostname(casuName, 15);
 }
@@ -228,13 +210,7 @@ void CASU_Interface::i2cComm() {
 			}
 		}
 
-
-		//usleep(150000);
 		this->mtxSub_.lock();
-		//int tmp = temp_r * 10;
-		//temp_rate_filter();
-        //int tmp = temp_ref * 10;
-		//if (tmp < 0) tmp = tmp + 65536;
 		int tmp = temp_ref * 10;
 		if (tmp < 0) tmp = tmp + 65536;
 		//printf("Sending temperature %d \n", tmp);
@@ -254,34 +230,6 @@ void CASU_Interface::i2cComm() {
 		this->mtxSub_.unlock();
 		status = i2cPIC.sendData(outBuff, OUT_DATA_NUM);
 		//usleep(150000);
-
-		if (startFlag) {
-			temp_old = temp[3];
-			startFlag = 0;
-		}
-		if (abs(temp[3] - temp_old) > 5) {
-			temp[3] = temp_old;
-		}
-		time(&time_a);
-
-        /*
-		double diff_t = difftime(time_a, ctlTime);
-		if (diff_t > 0.95) {
-			if (ctlFlag) {
-				temp_r = PIDcontroller_t(temp[3]); //left sensor;
-				printf("Ctl value = %.1f \n", temp_r);
-			}
-			else {
-				temp_r = 0;
-			}
-			temp_old = temp[3];
-			time(&ctlTime);
-			//printf("Control loop period = %.1f\n", diff_t);
-		}
-        */
-
-		temp_old = temp[3];
-
 	}
 }
 
@@ -507,13 +455,11 @@ void CASU_Interface::zmqSub() {
 					assert(temp_msg.ParseFromString(data));
 					mtxSub_.lock();
 					temp_ref = temp_msg.temp();
-					ctlFlag = 1;
 					mtxSub_.unlock();
 					printf("Reference temperature %.1f \n", temp_ref);
 				}
 				else if (command == "Off") {
 					mtxSub_.lock();
-					ctlFlag = 0;
 					temp_ref = 0;
 					mtxSub_.unlock();
 				}
@@ -527,80 +473,4 @@ void CASU_Interface::zmqSub() {
 
 		fflush(stdout);
 	}
-
 }
-
-/*
- * Function implements PI controller for Peltier device.
- * We use global variables for reference and measured temperature.
- * int i - row index
- * int j - column index
- */
-float CASU_Interface::PIDcontroller_t(float temp) {
-
-	//printf("Controler temp_ref, temp_m = %.1f %.1f \n", temp_ref, temp);
-    float e_t = temp_ref - temp;
-    float de_t = e_t - eOld_t;
-    float up = 0;
-    float ui = 0;
-    float ud = 0;
-
-    if (e_t > deadZone_t)
-        e_t = e_t - deadZone_t;
-    else if (e_t < -deadZone_t)
-        e_t = e_t + deadZone_t;
-    else
-        e_t = 0;
-
-
-    //float u  = uOld_t + Kp_t * de_t + Ki_t * e_t + Kd_t * (de_t - deOld_t);
-    if (abs(e_t) > 2) {
-    	Kp_t = 10;
-    	up = Kp_t * e_t;
-    	ui = 0;
-    	uiOld = up;
-    }
-    else {
-    	Kp_t = 2;
-    	up = Kp_t * e_t;
-        ui = uiOld + Ki_t * e_t;
-        uiOld = ui;
-    }
-
-    float u  = up + ui;
-
-    // rate limiter
-//    if (u - uOld_t  > 5)
-//        u = uOld_t + 5;
-//    else if (u - uOld_t < - 5)
-//        u = uOld_t - 5;
-
-
-    if (u > 100) {
-        u = 100;
-    	//ui = uiOld;
-    }
-    else if (u < -100) {
-        u = -100;
-        //ui = uiOld;
-    }
-    uOld_t = u;
-    eOld_t = e_t;
-    deOld_t = de_t;
-
-    return u;
-}
-
-void CASU_Interface::temp_rate_filter() {
-	if (temp_ref - temp_ref_old > temp_rate) {
-		temp_r = temp_ref_old + temp_rate;
-	}
-	else if (temp_ref - temp_ref_old < -temp_rate) {
-		temp_r = temp_ref_old - temp_rate;
-	}
-	else
-		temp_r = temp_ref;
-
-	temp_ref_old = temp_r;
-}
-

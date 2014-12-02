@@ -48,7 +48,7 @@ public:
 	 */
 	virtual ~CASU_Interface();
 
-	/*! Used for enumerating CASU infra-red (IR) sensors.
+	/*! \brief Used for enumerating CASU infra-red (IR) sensors.
 	 */
 	enum IR_ID {
 		IR_F = 0,  /*!< IR sensor on forward CASU side */
@@ -60,7 +60,7 @@ public:
 		IR_T = 6   /*!< IR sensor on top CASU side */
 	};
 
-	/*! Used for enumerating CASU temperature sensors.
+	/*! \brief Used for enumerating CASU temperature sensors.
 	 */
 	enum T_ID {
 		T_F = 0, /*!< Temperature sensor on forward CASU side */
@@ -70,7 +70,7 @@ public:
 		T_T = 4 /*!< Temperature sensor on top CASU side */
 	};
 
-	/*! Used for enumerating CASU accelerometer sensors.
+	/*! \brief Used for enumerating CASU accelerometer sensors.
 	 */
 	enum ACC_ID {
 		A_F = 0, /*!< Accelerometer sensor on forward CASU side */
@@ -79,7 +79,7 @@ public:
 		A_L = 3, /*!< Accelerometer sensor on left CASU side */
 	};
 
-	/*! Used for enumerating light-emitting diode (LED) components
+	/*! \brief Used for enumerating light-emitting diode (LED) components
 	 */
 	enum LED {
 		L_R = 0, /*!< Red LED component */
@@ -107,57 +107,42 @@ public:
 
 private:
 
-	zmq::context_t *zmqContext;
-	boost::mutex mtxPub_, mtxSub_;
+	zmq::context_t *zmqContext; /*!< ZMQ context variable  */
+	boost::mutex mtxPub_; /*!< Mutex used for locking outgoing data */
+	boost::mutex mtxSub_; /*!< Mutex used for locking incoming data*/
 
-	char outBuff[20];
-	char inBuff[60];
-	unsigned int dummy;
-	char status;;
-	float temp[5];
-	float vAmp[4];
-	float vFreq[4];
-	int irRawVals[7];
-	int ledCtl_s[3];
-	int ledDiag_s[3];
-	int ctlPeltier_s;
-	int pwmMotor_s;
+	I2C_SlaveMCU i2cPIC; /*! Used for i2c communication with CASU MCU*/
+	EHM *ehm_device;	 /*! Used for serial communication with electro-magnetic emitter control board */
 
-	float temp_r, temp_ref, temp_ref_old;
-	float temp_rate;
-	int ledCtl_r[3];
-	int ledDiag_r[3];
-	int ctlPeltier_r;
-	int pwmMotor_r;
+	char outBuff[20]; /*!< Buffer for i2c outgoing data  */
+	char inBuff[60]; /*!< Buffer for i2c incoming data */
+	unsigned int dummy; /*!< Variable used for storing bytes of incoming data*/
+	char status; /*!< Status variable !?*/
+	float temp[5]; /*!< Array containing latest temperature values from five sensors*/
+	float vAmp[4]; /*!< Array containing latest vibration amplitude values from four sensors */
+	float vFreq[4]; /*!< Array containing latest vibration frequency values from four sensors */
+	int irRawVals[7]; /*!< Array containing latest infra-red proximity values from seven sensors */
+	int ledCtl_s[3]; /*!< Array containing latest red, green and blue PWM values (0-100) of LED used as bee stimulus*/
+	int ledDiag_s[3]; /*!< Array containing latest red, green and blue PWM values (0-100) of LED used as diagnostic light */
+	int ctlPeltier_s; /*!< Latest PWM value (-100,100) set to Peltier device */
+	int pwmMotor_s; /*!< Latest PWM value (0,100) set to vibration motor */
 
-	int proxyThresh;
-	int nameLen;
-	char casuName[15];
-	I2C_SlaveMCU i2cPIC;
+	float temp_ref; /*!< Actual reference value for CASU temperature */
+	int ledCtl_r[3]; /*!< Actual reference values (RGB) for control LED*/
+	int ledDiag_r[3]; /*!< Actual reference values (RGB) for diagnostic LED*/
+	int pwmMotor_r; /*!< Actual reference value for vibration motor */
 
-	float vibeMotorConst;
+	int proxyThresh; /*!< Proximity sensor threshold */
+	char casuName[15]; /*!< Used for storing CASU name */
 
-    // EHM device
-	ehm *ehm_device;
-    int ehm_freq_electric;
-    int ehm_freq_magnetic;
-    int ehm_temp;
+	float vibeMotorConst; /*! Vibration motor constant - ratio of motor frequency and motor voltage*/
 
-    std::ofstream log_file;
+    int ehm_freq_electric;	/*!< Latest frequency of the electric field */
+    int ehm_freq_magnetic; /*!< Latest frequency of the magnetic field */
+    int ehm_temp; /*< Latest reference temperature value for magnetic heater (when used as such) */
 
-	time_t ctlTime, time_a;
-
-	// temp controller params
-	float uOld_t, eOld_t, deOld_t, deadZone_t, uiOld;
-	float Kp_t, Ki_t, Kd_t;
-	int ctlFlag;
-	float temp_old;
-	int startFlag;
-
-	timeval start_time;
-
-	float PIDcontroller_t(float temp);
-	void temp_rate_filter();
+    std::ofstream log_file; /*!< Data stream used for logging data in txt file*/
+	timeval start_time; /*!< Stores program start time and used for logging data */
 
 };
 

@@ -6,16 +6,15 @@
  */
 
 #include <unistd.h>
-
 #include "ehm.h"
 
 
-ehm::ehm(char *port, int baudRate) : Serial(port, baudRate) {
+EHM::EHM(char *port, int baudRate) : Serial(port, baudRate) {
 
 	this->moduleOff();
 }
 
-int ehm::initEField() {
+int EHM::initEField() {
 
 	unsigned char data = 0;
 	char outBuff[200] = {0};
@@ -62,7 +61,7 @@ int ehm::initEField() {
 
 }
 
-int ehm::setEFieldFreq(int freq) {
+int EHM::setEFieldFreq(int freq) {
 
 	if (this->Open() <= 0) {
 			printf("Cannot open com port \n");
@@ -96,7 +95,7 @@ int ehm::setEFieldFreq(int freq) {
 	return 1;
 }
 
-int ehm::initMField() {
+int EHM::initMField() {
 
 	unsigned char data = 0;
 	char outBuff[200] = {0};
@@ -146,7 +145,7 @@ int ehm::initMField() {
 	return 1;
 }
 
-int ehm::setMFieldFreq(int freq) {
+int EHM::setMFieldFreq(int freq) {
 
 	if (this->Open() <= 0) {
 			printf("Cannot open com port \n");
@@ -180,7 +179,7 @@ int ehm::setMFieldFreq(int freq) {
 	return 1;
 }
 
-int ehm::initHeating() {
+int EHM::initHeating() {
 
 	unsigned char data = 0;
 	char outBuff[200] = {0};
@@ -221,7 +220,7 @@ int ehm::initHeating() {
 	this->Close();
 	return 1;
 }
-int ehm::readParams() {
+int EHM::readParams() {
 	int status;
 	unsigned char inBuff[200];
 	if (this->Open() <= 0){
@@ -244,7 +243,7 @@ int ehm::readParams() {
 
 }
 
-int ehm::setHeaterPwm(int dutyCycle)  {
+int EHM::setHeaterPwm(int dutyCycle)  {
 
 	if (this->Open() <= 0){
 			printf("Cannot open com port \n");
@@ -260,7 +259,7 @@ int ehm::setHeaterPwm(int dutyCycle)  {
 	return 1;
 }
 
-int ehm::moduleOff() {
+int EHM::moduleOff() {
 
 	if (this->Open() <= 0) {
 			printf("Cannot open com port \n");
@@ -288,7 +287,7 @@ int ehm::moduleOff() {
 	return 1;
 }
 
-ehm::~ehm() {
+EHM::~EHM() {
 	// TODO Auto-generated destructor stub
 }
 
