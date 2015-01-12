@@ -26,11 +26,11 @@
  */
 #define IN_DATA_NUM 48
 
-/*! \brief Implements communication with CASU microcontroller (MCU), communication with CASU controller and data logging.
+/*! \brief Implements communication with CASU microcontroller (MCU), communication with a user code (CASU controller) and data logging.
  *
- * Class serves as interface between CASU MCU and CASU controller and it should be run on a single-board computer (SBC) such as Beaglebone, RaspberyPI, Odroid etc.
- * Communication with MCU is based on i2c protocol where SBC acts as a master and CASU MCU acts as a slave.
- * Communication with CASU controller is based on messages generated with Google Protobuf and transmitted using ZMQ protocol.
+ * Class serves as an interface between CASU MCU and a user code and it should be run on a single-board computer (SBC) such as Beaglebone, RaspberyPI, Odroid etc.
+ * Communication with MCU is based on an i2c protocol with SBC acting as a master and CASU MCU acting as a slave.
+ * Communication with user code is based on messages generated with Google Protobuf and transmitted using ZMQ protocol.
  * Data is logged in a txt file compatible for Matlab import (first row - header containing data info, following rows - data values separated by space delimiter).
  */
 class CASU_Interface {
@@ -39,7 +39,7 @@ public:
 
 	/*! \brief Constructor.
 	 *
-	 * @param i2c_bus number of i2c bus used for MCU communication
+	 * @param i2c_bus number of an i2c bus used for communication with MCU
 	 * @param i2c_address i2c address of a CASU MCU slave
 	 */
 	CASU_Interface(int i2c_bus, int i2c_address);
@@ -100,49 +100,49 @@ public:
 
 	/*! Thread safe method that receives messages using ZMQ protocol.
 	 *
-	 * Function receives data from CASU controller(s) and/or GUI (such as temperature reference, vibration frequency reference and etc.).
-	 * Data is received through ZMQ protocol in form of protobuf messages.
+	 * Function receives data from user code and/or GUI (such as temperature reference, vibration frequency reference and etc.).
+	 * Data is received through ZMQ midlleware in a form of protobuf messages.
 	 */
 	void zmqSub();
 
 private:
 
-	zmq::context_t *zmqContext; /*!< ZMQ context variable  */
-	boost::mutex mtxPub_; /*!< Mutex used for locking outgoing data */
-	boost::mutex mtxSub_; /*!< Mutex used for locking incoming data*/
+	zmq::context_t *zmqContext; /*!< ZMQ context variable.  */
+	boost::mutex mtxPub_; /*!< Mutex used for locking outgoing data. */
+	boost::mutex mtxSub_; /*!< Mutex used for locking incoming data. */
 
-	I2C_SlaveMCU i2cPIC; /*! Used for i2c communication with CASU MCU*/
-	EHM *ehm_device;	 /*! Used for serial communication with electro-magnetic emitter control board */
+	I2C_SlaveMCU i2cPIC; /*!< Used for i2c communication with CASU MCU. */
+	EHM *ehm_device;	 /*!< Used for serial communication with electro-magnetic emitter control board. */
 
-	char outBuff[20]; /*!< Buffer for i2c outgoing data  */
-	char inBuff[60]; /*!< Buffer for i2c incoming data */
-	unsigned int dummy; /*!< Variable used for storing bytes of incoming data*/
-	char status; /*!< Status variable !?*/
-	float temp[5]; /*!< Array containing latest temperature values from five sensors*/
-	float vAmp[4]; /*!< Array containing latest vibration amplitude values from four sensors */
-	float vFreq[4]; /*!< Array containing latest vibration frequency values from four sensors */
-	int irRawVals[7]; /*!< Array containing latest infra-red proximity values from seven sensors */
-	int ledCtl_s[3]; /*!< Array containing latest red, green and blue PWM values (0-100) of LED used as bee stimulus*/
-	int ledDiag_s[3]; /*!< Array containing latest red, green and blue PWM values (0-100) of LED used as diagnostic light */
-	int ctlPeltier_s; /*!< Latest PWM value (-100,100) set to Peltier device */
-	int pwmMotor_s; /*!< Latest PWM value (0,100) set to vibration motor */
+	char outBuff[20]; /*!< Buffer for i2c outgoing data.  */
+	char inBuff[60]; /*!< Buffer for i2c incoming data. */
+	unsigned int dummy; /*!< Variable used for storing temporarily byte of incoming data.*/
+	char status; /*!< Status variable. */
+	float temp[5]; /*!< Array containing latest temperature values from five sensors. */
+	float vAmp[4]; /*!< Array containing latest vibration amplitude values from four sensors. */
+	float vFreq[4]; /*!< Array containing latest vibration frequency values from four sensors. */
+	int irRawVals[7]; /*!< Array containing latest infra-red proximity values from seven sensors. */
+	int ledCtl_s[3]; /*!< Array containing latest red, green and blue PWM values (0-100) of LED used as bee stimulus. */
+	int ledDiag_s[3]; /*!< Array containing latest red, green and blue PWM values (0-100) of LED used as diagnostic light. */
+	int ctlPeltier_s; /*!< Latest PWM value (-100,100) set to Peltier device. */
+	int pwmMotor_s; /*!< Latest PWM value (0,100) set to vibration motor. */
 
-	float temp_ref; /*!< Actual reference value for CASU temperature */
-	int ledCtl_r[3]; /*!< Actual reference values (RGB) for control LED*/
-	int ledDiag_r[3]; /*!< Actual reference values (RGB) for diagnostic LED*/
-	int pwmMotor_r; /*!< Actual reference value for vibration motor */
+	float temp_ref; /*!< Actual reference value for CASU temperature. */
+	int ledCtl_r[3]; /*!< Actual reference values (RGB) for control LED. */
+	int ledDiag_r[3]; /*!< Actual reference values (RGB) for diagnostic LED. */
+	int pwmMotor_r; /*!< Actual reference value for vibration motor. */
 
-	int proxyThresh; /*!< Proximity sensor threshold */
-	char casuName[15]; /*!< Used for storing CASU name */
+	int proxyThresh; /*!< Proximity sensor threshold. */
+	char casuName[15]; /*!< Used for storing CASU name. */
 
-	float vibeMotorConst; /*! Vibration motor constant - ratio of motor frequency and motor voltage*/
+	float vibeMotorConst; /*!< Vibration motor constant - ratio of motor frequency and motor voltage. */
 
-    int ehm_freq_electric;	/*!< Latest frequency of the electric field */
-    int ehm_freq_magnetic; /*!< Latest frequency of the magnetic field */
-    int ehm_temp; /*< Latest reference temperature value for magnetic heater (when used as such) */
+    int ehm_freq_electric;	/*!< Latest frequency of the electric field. */
+    int ehm_freq_magnetic; /*!< Latest frequency of the magnetic field. */
+    int ehm_temp; /*!< Latest reference temperature value for magnetic heater (when used as a heater). */
 
-    std::ofstream log_file; /*!< Data stream used for logging data in txt file*/
-	timeval start_time; /*!< Stores program start time and used for logging data */
+    std::ofstream log_file; /*!< Data stream used for logging data in txt file. */
+	timeval start_time; /*!< Stores program start time and used for logging data. */
 
 };
 

@@ -19,7 +19,7 @@
 
 using namespace std;
 
-/*! Main function of the CASU interface between MCU and user controller.
+/*! \brief Main function of the CASU interface between MCU and user controller.
  *
  *  Instantiates CASU_Interface and creates three threads for:
  *  - i2c communication

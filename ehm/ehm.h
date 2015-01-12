@@ -1,5 +1,5 @@
 /*! \file ehm.h
- *  \brief Definition of EHM class used for communicating with electro-magnetic emmitters by Cybertronica.
+ *  \brief Definition of EHM class used for communicating with electro-magnetic emmitters provided by Cybertronica.
  */
 
 #ifndef EHM_H
@@ -95,17 +95,17 @@
  */
 #define DELAY 25000 // us
 
-/*! \brief Implements protocol for communicating with electro-magnetic (EHM) emitters control board by Cybertronica.
+/*! \brief Implements protocol for communicating with electro-magnetic (EHM) emitters control board provided by Cybertronica.
  *
- * EHM control board should be attached to the USB port of the single-board computers, such as Beaglebone, RaspberryPi, Odroid, etc.
+ * EHM control board should be attached to a USB port of a single-board computer, such as Beaglebone, RaspberryPi, Odroid, etc.
  * Implemented protocol is based on EHM control board documentation (<a href="http://cybertronica.co/sites/datasheets/EHM-C-v14-E.pdf">EHM control board</a>)
  */
 class EHM : Serial {
 public:
 
-	/*! \brief Constructor. Initializes serial port and baud rate.
+	/*! \brief Constructor. Initializes a serial port and sets its baud rate.
 	 *
-	 *@param port Serial port name.
+	 *@param port Name of the serial port.
 	 *@param baudRate Serial communication baud rate.
 	 */
 	EHM(char *port, int baudRate);
@@ -114,7 +114,7 @@ public:
 	 */
 	virtual ~EHM();
 
-	/*! \brief Method reads and prints on standard output current parameter values of the EHM control board.
+	/*! \brief Method reads and prints on standard output current parameter values of EHM control board.
 	 *
 	 * @return 1 - parameters successfully read \n
 	 * 		  -1 - failed to open serial port, parameters not read
@@ -142,9 +142,9 @@ public:
 	 */
 	int initMField();
 
-	/*! \brief Method sets PWM duty cycle value for heating magnetic actuator.
+	/*! \brief Method sets PWM duty cycle value for magnetic actuator used as a heater.
 	 *
-	 *@param dutyCycle Duty cycle (0-100) of PWM signal for heater actuator
+	 *@param dutyCycle Duty cycle (0-100) of PWM signal used for heater control
 	 *@return 1 - parameter successfully set \n
 	 * 		 -1 - failed to open serial port, parameter not set
 	 */

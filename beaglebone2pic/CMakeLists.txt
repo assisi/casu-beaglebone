@@ -37,7 +37,7 @@ set(casu_fw_SOURCES mainApp.cpp
                     CASU_Interface.cpp
                     ../serial/serial.cpp
                     ../i2c/i2cDevice.cpp
-                    ../i2c/i2cSlavePIC.cpp
+                    ../i2c/i2cSlaveMCU.cpp
                     ../ehm/ehm.cpp
                     ${ProtoSources})
 
