@@ -1,0 +1,4 @@
+name : casu-004
+pub_addr : tcp://*:5555
+sub_addr : tcp://*:5556
+i2c_addr : 0x0b

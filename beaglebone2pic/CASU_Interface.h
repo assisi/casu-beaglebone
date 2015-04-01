@@ -42,7 +42,8 @@ public:
 	 * @param i2c_bus number of an i2c bus used for communication with MCU
 	 * @param i2c_address i2c address of a CASU MCU slave
 	 */
-	CASU_Interface(int i2c_bus, int i2c_address);
+	CASU_Interface(const std::string& name,
+                   int i2c_bus, int i2c_address);
 
 	/*! Destructor.
 	 */
@@ -96,14 +97,14 @@ public:
 	 * Function sends data received from CASU MCU (such as temperature value, vibration frequency and etc.).
 	 * Data is formed in protobuf messages and sent using ZMQ protocol.
 	 */
-	void zmqPub();
+	void zmqPub(const std::string& pub_addr);
 
 	/*! Thread safe method that receives messages using ZMQ protocol.
 	 *
 	 * Function receives data from user code and/or GUI (such as temperature reference, vibration frequency reference and etc.).
 	 * Data is received through ZMQ midlleware in a form of protobuf messages.
 	 */
-	void zmqSub();
+	void zmqSub(const std::string& sub_addr);
 
 private:
 
@@ -133,7 +134,7 @@ private:
 	int pwmMotor_r; /*!< Actual reference value for vibration motor. */
 
 	int proxyThresh; /*!< Proximity sensor threshold. */
-	char casuName[15]; /*!< Used for storing CASU name. */
+    std::string casuName; /*!< Used for storing CASU name. */
 
 	float vibeMotorConst; /*!< Vibration motor constant - ratio of motor frequency and motor voltage. */
 

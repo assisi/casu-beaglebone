@@ -9,7 +9,9 @@
 
 using namespace std;
 
-CASU_Interface::CASU_Interface(int bus, int picAddress)
+CASU_Interface::CASU_Interface(const std::string& name, 
+                               int bus, int picAddress)
+    : casuName(name)
 	{
 
 	i2cPIC.initI2C(bus, picAddress);
@@ -67,8 +69,6 @@ CASU_Interface::CASU_Interface(int bus, int picAddress)
 	vibeMotorConst = 0.1758;
 
 	log_file.open("log/log.txt", ios::out);
-
-	gethostname(casuName, 15);
 }
 
 CASU_Interface::~CASU_Interface() {
@@ -233,10 +233,10 @@ void CASU_Interface::i2cComm() {
 	}
 }
 
-void CASU_Interface::zmqPub() {
+void CASU_Interface::zmqPub(const std::string& pub_addr) {
 
 	zmq::socket_t zmqPub(*zmqContext, ZMQ_PUB);
-	zmqPub.bind("tcp://*:5555");
+	zmqPub.bind(pub_addr.c_str());
 	int range;
 	cout << "Starting pub server: " << casuName << endl;
 
@@ -269,7 +269,7 @@ void CASU_Interface::zmqPub() {
 		}
 		this->mtxPub_.unlock();
 		ranges.SerializeToString(&data);
-		zmq::send_multipart(zmqPub, casuName, "IR", "Ranges", data);
+		zmq::send_multipart(zmqPub, casuName.c_str(), "IR", "Ranges", data);
 
 		temp_clock++;
 		if (temp_clock == 4) {
@@ -279,7 +279,7 @@ void CASU_Interface::zmqPub() {
 			}
 			this->mtxPub_.unlock();
 			temps.SerializeToString(&data);
-			zmq::send_multipart(zmqPub, casuName, "Temp", "Temperatures", data);
+			zmq::send_multipart(zmqPub, casuName.c_str(), "Temp", "Temperatures", data);
 			//printf("Sending temp data %.1f %.1f %.1f %.1f %.1f \n", temps.temp(0), temps.temp(1), temps.temp(2), temps.temp(3), temps.temp(4));
 
 			AssisiMsg::VibrationReadingArray vibes;
@@ -297,7 +297,7 @@ void CASU_Interface::zmqPub() {
 			//printf("Sending proxy data %.1f %.1f %.1f %.1f %.1f %.1f %.1f \n", ranges.rif (abs(temp[3] - temp_old) > 5)) {
 
 			vibes.SerializeToString(&data);
-			zmq::send_multipart(zmqPub, casuName, "Acc", "Measurements", data);
+			zmq::send_multipart(zmqPub, casuName.c_str(), "Acc", "Measurements", data);
 
 			temp_clock = 0;
 		}
@@ -306,12 +306,13 @@ void CASU_Interface::zmqPub() {
 	}
 }
 
-void CASU_Interface::zmqSub() {
+void CASU_Interface::zmqSub(const std::string& sub_addr) 
+{
 
 	zmq::socket_t zmqSub(*zmqContext, ZMQ_SUB);
-	zmqSub.bind("tcp://*:5556");
+	zmqSub.bind(sub_addr.c_str());
 	//zmqSub.connect("tcp://127.0.0.1:5556");
-	zmqSub.setsockopt(ZMQ_SUBSCRIBE, casuName, 4);
+	zmqSub.setsockopt(ZMQ_SUBSCRIBE, casuName.c_str(), 4);
 
 	string name;
 	string device;

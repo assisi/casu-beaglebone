@@ -3,23 +3,20 @@
  */
 
 
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <iostream>
-//#include <linux/i2c.h>
-#include <linux/i2c-dev.h>
-#include <sys/ioctl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 #include "CASU_Interface.h"
+
 #include <boost/thread.hpp>
+#include <yaml-cpp/yaml.h>
+
+#include <iostream>
 
 using namespace std;
 
 /*! \brief Main function of the CASU interface between MCU and user controller.
+ *
+ *  An .fbc file *MUST* be provided as the only argument when invoking the program:
+ *  
+ *  casu-fw <firmware board config>.fbc
  *
  *  Instantiates CASU_Interface and creates three threads for:
  *  - i2c communication
@@ -28,12 +25,24 @@ using namespace std;
  */
 int main(int argc, char **argv) {
 
-	CASU_Interface BBBintf(2, 0x0b);
+    if (argc < 2)
+    {
+        cout << "Please provide the .fbc file name as the program argument." << endl;
+        exit(1);
+    }
+
+    YAML::Node fbc = YAML::LoadFile(argv[1]);
+    string name = fbc["name"].as<string>();
+    string pub_addr = fbc["pub_addr"].as<string>();
+    string sub_addr = fbc["sub_addr"].as<string>();
+    int i2c_addr = fbc["i2c_addr"].as<int>();
+
+	CASU_Interface BBBintf(name, 2, i2c_addr);
 
 	boost::thread_group threads;
 	threads.create_thread(boost::bind(&CASU_Interface::i2cComm, &BBBintf));
-	threads.create_thread(boost::bind(&CASU_Interface::zmqPub, &BBBintf));
-	threads.create_thread(boost::bind(&CASU_Interface::zmqSub, &BBBintf));
+	threads.create_thread(boost::bind(&CASU_Interface::zmqPub, &BBBintf, pub_addr));
+	threads.create_thread(boost::bind(&CASU_Interface::zmqSub, &BBBintf, sub_addr));
 	threads.join_all();
 
 	return 0;

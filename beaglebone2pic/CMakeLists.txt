@@ -6,11 +6,13 @@
 #find_library(PROTOBUF_LIBRARY protobuf)
 
 # Needed variables for finding required headers and libraries
-SET(ZeroMQ_INCLUDE_DIR ${CMAKE_FIND_ROOT_PATH}/include)
-SET(ZeroMQ_LIBRARY ${CMAKE_FIND_ROOT_PATH}/lib/libzmq.so)
-SET(Boost_LIBRARIES ${CMAKE_FIND_ROOT_PATH}/lib/libboost_thread.so)
-SET(PROTOBUF_LIBRARY ${CMAKE_FIND_ROOT_PATH}/lib/libprotobuf.so)
-SET(PROTOBUF_INCLUDE_DIR ${CMAKE_FIND_ROOT_PATH}/include/google/protobuf)
+SET(ZeroMQ_INCLUDE_DIR ${CMAKE_FIND_ROOT_PATH}/usr/include)
+SET(ZeroMQ_LIBRARY ${CMAKE_FIND_ROOT_PATH}/usr/lib/libzmq.so)
+SET(Boost_LIBRARIES ${CMAKE_FIND_ROOT_PATH}/usr/lib/libboost_thread.so)
+SET(PROTOBUF_LIBRARY ${CMAKE_FIND_ROOT_PATH}/usr/lib/libprotobuf.so)
+SET(PROTOBUF_INCLUDE_DIR ${CMAKE_FIND_ROOT_PATH}/usr/include/google/protobuf)
+
+find_library(yaml-cpp_LIBRARY libyaml-cpp.a)
 
 #find_package(Boost COMPONENTS thread REQUIRED)
 find_package(Protobuf REQUIRED)
@@ -42,7 +44,7 @@ set(casu_fw_SOURCES mainApp.cpp
                     ${ProtoSources})
 
 # Set -rpath-link linker flags, to prevent weird 2nd-order-dependency linker errors that cost me a handfll of gray hair
-set(CMAKE_EXE_LINKER_FLAGS "-Wl,-rpath-link,${CMAKE_FIND_ROOT_PATH}/lib/ -Wl,-rpath,${CMAKE_FIND_ROOT_PATH}/lib/")
+set(CMAKE_EXE_LINKER_FLAGS "-Wl,-rpath-link,${CMAKE_FIND_ROOT_PATH}/usr/lib/ -Wl,-rpath,${CMAKE_FIND_ROOT_PATH}/usr/lib/ -Wl,-rpath-link,${CMAKE_FIND_ROOT_PATH}/lib/arm-linux-gnueabihf -Wl,-rpath,${CMAKE_FIND_ROOT_PATH}/lib/arm-linux-gnueabihf")
 
 add_executable(casu-fw ${casu_fw_SOURCES})
-target_link_libraries(casu-fw ${ZeroMQ_LIBRARY} ${PROTOBUF_LIBRARY} ${Boost_LIBRARIES})
+target_link_libraries(casu-fw ${ZeroMQ_LIBRARY} ${PROTOBUF_LIBRARY} ${Boost_LIBRARIES} ${yaml-cpp_LIBRARY})

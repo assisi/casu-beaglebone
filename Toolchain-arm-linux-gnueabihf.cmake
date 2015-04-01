@@ -9,8 +9,8 @@ SET(CMAKE_C_COMPILER   arm-linux-gnueabihf-gcc)
 SET(CMAKE_CXX_COMPILER arm-linux-gnueabihf-g++)
 
 # where is the target environment
-SET(CMAKE_FIND_ROOT_PATH /usr/arm-linux-gnueabihf)
-#SET(CMAKE_FIND_ROOT_PATH $ENV{CROSS_ENV_ROOT})
+#SET(CMAKE_FIND_ROOT_PATH /usr/arm-linux-gnueabihf)
+SET(CMAKE_FIND_ROOT_PATH $ENV{CROSS_ENV_ROOT})
 
 #message(ROOT ${CMAKE_FIND_ROOT_PATH})
 
