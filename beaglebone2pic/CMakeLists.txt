@@ -1,13 +1,11 @@
 # Beaglebone 2 pic CMake script
 
-#find_path(ZeroMQ_INCLUDE_DIR zmq.hpp )
-#find_library(ZeroMQ_LIBRARY zmq)
+find_path(ZeroMQ_INCLUDE_DIR zmq.hpp)
+find_library(ZeroMQ_LIBRARY libzmq.so)
 #find_library(Boost_LIBRARIES boost_thread)
 #find_library(PROTOBUF_LIBRARY protobuf)
 
 # Needed variables for finding required headers and libraries
-SET(ZeroMQ_INCLUDE_DIR ${CMAKE_FIND_ROOT_PATH}/usr/include)
-SET(ZeroMQ_LIBRARY ${CMAKE_FIND_ROOT_PATH}/usr/lib/libzmq.so)
 SET(Boost_LIBRARIES ${CMAKE_FIND_ROOT_PATH}/usr/lib/libboost_thread.so)
 SET(PROTOBUF_LIBRARY ${CMAKE_FIND_ROOT_PATH}/usr/lib/libprotobuf.so)
 SET(PROTOBUF_INCLUDE_DIR ${CMAKE_FIND_ROOT_PATH}/usr/include/google/protobuf)
