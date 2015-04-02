@@ -55,8 +55,9 @@ CASU_Interface::CASU_Interface(const std::string& name,
 	proxyThresh = 4000;
 
     // EHM device configuration
-	ehm_device = new EHM("/dev/ttyACM0", 9600);
-	ehm_freq_electric = 0;
+    // We are no longer using electro-magnetic emitters
+    //ehm_device = new EHM("/dev/ttyACM0", 9600);
+    ehm_freq_electric = 0;
     ehm_freq_magnetic = 0;
     ehm_temp = 0;
 
@@ -68,12 +69,12 @@ CASU_Interface::CASU_Interface(const std::string& name,
 	* */
 	vibeMotorConst = 0.1758;
 
-	log_file.open("log/log.txt", ios::out);
+    log_file.open((std::string("log/") + casuName + std::string(".txt")).c_str(), ios::out);
 }
 
 CASU_Interface::~CASU_Interface() {
 	log_file.close();
-	delete ehm_device;
+    //delete ehm_device;
 	delete zmqContext;
 }
 
@@ -400,8 +401,10 @@ void CASU_Interface::zmqSub(const std::string& sub_addr)
 			}
 			else if (device == "EM") {
 
-				printf("Received EM device message: %s\n", command.data());
-				if (command == "config") {
+                printf("Received EM device message: %s\n \
+                       ...Discarding message as we are now longer using electro-magnetic emitters", command.data());
+                /*
+                if (command == "config") {
 					AssisiMsg::EMDeviceConfig config;
 					assert(config.ParseFromString(data));
 					if (config.mode() == AssisiMsg::EMDeviceConfig_DeviceMode_ELECTRIC) {
@@ -447,6 +450,7 @@ void CASU_Interface::zmqSub(const std::string& sub_addr)
                     ehm_freq_electric = 0;
                     ehm_freq_magnetic = 0;
 				}
+                */
 
 			}
 			else if (device == "Peltier") {
