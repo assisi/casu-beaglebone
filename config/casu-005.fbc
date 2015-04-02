@@ -1,4 +1,17 @@
+# A Firmware Board Configuratoin (FBC) template file (yaml syntax)
+# Each firmware instance should be run with it's own FBC file
+
+# Name of the CASU that the firmware instance is controlling
 name : casu-005
-pub_addr : tcp://*:5555
-sub_addr : tcp://*:5556
-i2c_addr : 0x0b
+
+# Address to publish sensor data from
+# * means "bind to all interfaces"
+# this corresponds to the "sub_addr" in RTC files
+pub_addr : tcp://*:1555
+
+# Address from which actuator commands are read
+# Corresponds to the "pub_addr" in RTC files
+sub_addr : tcp://*:1556
+
+# Hardware address on I2C bus
+i2c_addr : 0x11
