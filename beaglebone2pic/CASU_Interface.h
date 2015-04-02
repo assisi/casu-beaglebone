@@ -20,11 +20,11 @@
 
 /*! Number of bytes sent to CASU MCU through i2c communication.
  */
-#define OUT_DATA_NUM 10
+#define OUT_DATA_NUM 11
 
 /*! Number of bytes received from CASU MCU through i2c communication.
  */
-#define IN_DATA_NUM 48
+#define IN_DATA_NUM 51
 
 /*! \brief Implements communication with CASU microcontroller (MCU), communication with a user code (CASU controller) and data logging.
  *
@@ -120,6 +120,7 @@ private:
 	unsigned int dummy; /*!< Variable used for storing temporarily byte of incoming data.*/
 	char status; /*!< Status variable. */
 	float temp[5]; /*!< Array containing latest temperature values from five sensors. */
+    float tempWax; /*!< Estimated wax temperature. */
 	float vAmp[4]; /*!< Array containing latest vibration amplitude values from four sensors. */
 	float vFreq[4]; /*!< Array containing latest vibration frequency values from four sensors. */
 	int irRawVals[7]; /*!< Array containing latest infra-red proximity values from seven sensors. */
@@ -127,11 +128,14 @@ private:
 	int ledDiag_s[3]; /*!< Array containing latest red, green and blue PWM values (0-100) of LED used as diagnostic light. */
 	int ctlPeltier_s; /*!< Latest PWM value (-100,100) set to Peltier device. */
 	int pwmMotor_s; /*!< Latest PWM value (0,100) set to vibration motor. */
+    int airflow_s; /*!< Latest PWM value (0,100) set to the actuator producing airflow. */
+
 
 	float temp_ref; /*!< Actual reference value for CASU temperature. */
 	int ledCtl_r[3]; /*!< Actual reference values (RGB) for control LED. */
 	int ledDiag_r[3]; /*!< Actual reference values (RGB) for diagnostic LED. */
 	int pwmMotor_r; /*!< Actual reference value for vibration motor. */
+    int airflow_r; /*!< Actual reference value for actuator producing airflow. */
 
 	int proxyThresh; /*!< Proximity sensor threshold. */
     std::string casuName; /*!< Used for storing CASU name. */

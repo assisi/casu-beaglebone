@@ -37,6 +37,7 @@ CASU_Interface::CASU_Interface(const std::string& name,
 	temp[2] = 102;
 	temp[3] = 103;
 	temp[4] = 104;
+    tempWax = -1;
 
 	vAmp[0] = 0.1;
 	vAmp[1] = 0.2;
@@ -49,6 +50,9 @@ CASU_Interface::CASU_Interface(const std::string& name,
 	vFreq[3] = 40.0;
 
 	pwmMotor_r = 0;
+
+    airflow_r = 0;
+    airflow_s = 0;
 
 	temp_ref = 0;
 
@@ -84,7 +88,8 @@ void CASU_Interface::i2cComm() {
 	std::stringstream ss;
 	gettimeofday(&start_time, NULL);
 	timeval current_time;
-	sprintf(str_buff, "time temp_f temp_r temp_l temp_b temp_top temp_ref pelt mot \n");
+    sprintf(str_buff, "time temp_f temp_r temp_b temp_l temp_top temp_wax temp_ref pelt mot fan \
+            proxi_f proxi_fr proxi_br proxi_b proxi_bl proxi_fl \n");
 	log_file.write(str_buff, strlen(str_buff));
 	while(1) {
 		status = i2cPIC.receiveData(inBuff, IN_DATA_NUM);
@@ -95,7 +100,7 @@ void CASU_Interface::i2cComm() {
 		}
 		else {
 
-			//cout << "Read bytes: " << IN_DATA_NUM << std::endl;
+            //cout << "Read bytes: " << IN_DATA_NUM << std::endl;
 
 			this->mtxPub_.lock();
 			dummy = inBuff[0] | (inBuff[1] << 8);
@@ -147,7 +152,7 @@ void CASU_Interface::i2cComm() {
 			irRawVals[IR_T]= inBuff[38] | (inBuff[39] << 8);
 
 			ctlPeltier_s = inBuff[40];
-			if (ctlPeltier_s > 100) ctlPeltier_s = ctlPeltier_s - 200;
+            if (ctlPeltier_s > 100) ctlPeltier_s = ctlPeltier_s - 201;
 			pwmMotor_s = inBuff[41];
 
 			ledCtl_s[L_R] = inBuff[42];
@@ -157,10 +162,21 @@ void CASU_Interface::i2cComm() {
 			ledDiag_s[L_G] = inBuff[46];
 			ledDiag_s[L_B] = inBuff[47];
 
+            airflow_s = inBuff[48];
+
+            dummy = inBuff[49] | (inBuff[50] << 8);
+            if (dummy > 32767)
+                tempWax = (dummy - 65536.0) / 10.0;
+            else
+                tempWax = dummy / 10.0;
+
 			this->mtxPub_.unlock();
 			gettimeofday(&current_time, NULL);
 			double t_msec = (current_time.tv_sec - start_time.tv_sec) * 1000 + (current_time.tv_usec - start_time.tv_usec)/1000;
-			sprintf(str_buff, "%.2f %.1f %.1f %.1f %.1f %.1f %.1f %d %d \n", t_msec / 1000, temp[T_F], temp[T_R], temp[T_L], temp[T_B], temp[T_T], temp_ref, ctlPeltier_s, pwmMotor_s);
+            sprintf(str_buff, "%.2f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %d %d %d %d %d %d %d %d %d \n",
+                    t_msec / 1000, temp[T_F], temp[T_R], temp[T_B], temp[T_L], temp[T_T], tempWax, temp_ref,
+                    ctlPeltier_s, pwmMotor_s, airflow_s,
+                    irRawVals[IR_F], irRawVals[IR_FR], irRawVals[IR_BR], irRawVals[IR_B], irRawVals[IR_BL], irRawVals[IR_FL]);
 			log_file.write(str_buff, strlen(str_buff));
 			log_file.flush();
 			print_counter++;
@@ -169,6 +185,7 @@ void CASU_Interface::i2cComm() {
 				for (int i = 0; i < 5; i++) {
 					printf("%.1f ", temp[i]);
 				}
+                printf("%.1f ", tempWax);
 				printf("\n");
 
 				printf("vibeAmp = ");
@@ -201,7 +218,7 @@ void CASU_Interface::i2cComm() {
 				}
 				printf("\n");
 
-				printf("peltier, motor = %d %d\n", ctlPeltier_s, pwmMotor_s);
+                printf("peltier, motor, fan = %d %d %d\n", ctlPeltier_s, pwmMotor_s, airflow_s);
 
                 printf("EM electric, EM magnetic, EM heat = %d %d %d\n", ehm_freq_electric,
                        ehm_freq_magnetic,
@@ -228,6 +245,8 @@ void CASU_Interface::i2cComm() {
 		outBuff[7] = ledDiag_r[0];
 		outBuff[8] = ledDiag_r[1];
 		outBuff[9] = ledDiag_r[2];
+
+        outBuff[10] = airflow_r;
 		this->mtxSub_.unlock();
 		status = i2cPIC.sendData(outBuff, OUT_DATA_NUM);
 		//usleep(150000);
@@ -469,6 +488,22 @@ void CASU_Interface::zmqSub(const std::string& sub_addr)
 					mtxSub_.unlock();
 				}
 			}
+            else if (device == "Airflow") {
+                printf("Received Airflow message: %s\n", command.data());
+                if (command == "On") {
+                    AssisiMsg::Airflow air_msg;
+                    assert(air_msg.ParseFromString(data));
+                    mtxSub_.lock();
+                    airflow_r = air_msg.intensity();
+                    mtxSub_.unlock();
+                    printf("Reference airflow %d \n", airflow_r);
+                }
+                else if (command == "Off") {
+                    mtxSub_.lock();
+                    airflow_r = 0;
+                    mtxSub_.unlock();
+                }
+            }
 			else
 			{
 				cerr << "Unknown device " << device << endl;
