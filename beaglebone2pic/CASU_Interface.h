@@ -24,7 +24,7 @@
 
 /*! Number of bytes received from CASU MCU through i2c communication.
  */
-#define IN_DATA_NUM 51
+#define IN_DATA_NUM 52
 
 /*! \brief Implements communication with CASU microcontroller (MCU), communication with a user code (CASU controller) and data logging.
  *
@@ -129,7 +129,7 @@ private:
 	int ctlPeltier_s; /*!< Latest PWM value (-100,100) set to Peltier device. */
 	int pwmMotor_s; /*!< Latest PWM value (0,100) set to vibration motor. */
     int airflow_s; /*!< Latest PWM value (0,100) set to the actuator producing airflow. */
-
+    int fanCooler; /*!< Latest PWM value (0,100) set to the fan which cools the PCB and aluminium cooler. */
 
 	float temp_ref; /*!< Actual reference value for CASU temperature. */
 	int ledCtl_r[3]; /*!< Actual reference values (RGB) for control LED. */

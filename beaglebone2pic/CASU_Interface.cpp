@@ -54,6 +54,8 @@ CASU_Interface::CASU_Interface(const std::string& name,
     airflow_r = 0;
     airflow_s = 0;
 
+    fanCooler = 0;
+
 	temp_ref = 0;
 
 	proxyThresh = 4000;
@@ -88,7 +90,7 @@ void CASU_Interface::i2cComm() {
 	std::stringstream ss;
 	gettimeofday(&start_time, NULL);
 	timeval current_time;
-    sprintf(str_buff, "time temp_f temp_r temp_b temp_l temp_top temp_wax temp_ref pelt mot fan \
+    sprintf(str_buff, "time temp_f temp_r temp_b temp_l temp_top temp_wax temp_ref pelt mot fanAir fanCool \
             proxi_f proxi_fr proxi_br proxi_b proxi_bl proxi_fl \n");
 	log_file.write(str_buff, strlen(str_buff));
 	while(1) {
@@ -163,8 +165,9 @@ void CASU_Interface::i2cComm() {
 			ledDiag_s[L_B] = inBuff[47];
 
             airflow_s = inBuff[48];
+            fanCooler = inBuff[49];
 
-            dummy = inBuff[49] | (inBuff[50] << 8);
+            dummy = inBuff[50] | (inBuff[51] << 8);
             if (dummy > 32767)
                 tempWax = (dummy - 65536.0) / 10.0;
             else
@@ -173,9 +176,9 @@ void CASU_Interface::i2cComm() {
 			this->mtxPub_.unlock();
 			gettimeofday(&current_time, NULL);
 			double t_msec = (current_time.tv_sec - start_time.tv_sec) * 1000 + (current_time.tv_usec - start_time.tv_usec)/1000;
-            sprintf(str_buff, "%.2f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %d %d %d %d %d %d %d %d %d \n",
+            sprintf(str_buff, "%.2f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %d %d %d %d %d %d %d %d %d %d \n",
                     t_msec / 1000, temp[T_F], temp[T_R], temp[T_B], temp[T_L], temp[T_T], tempWax, temp_ref,
-                    ctlPeltier_s, pwmMotor_s, airflow_s,
+                    ctlPeltier_s, pwmMotor_s, airflow_s, fanCooler,
                     irRawVals[IR_F], irRawVals[IR_FR], irRawVals[IR_BR], irRawVals[IR_B], irRawVals[IR_BL], irRawVals[IR_FL]);
 			log_file.write(str_buff, strlen(str_buff));
 			log_file.flush();
@@ -218,7 +221,7 @@ void CASU_Interface::i2cComm() {
 				}
 				printf("\n");
 
-                printf("peltier, motor, fan = %d %d %d\n", ctlPeltier_s, pwmMotor_s, airflow_s);
+                printf("peltier, motor, fan, fanCooler = %d %d %d %d\n", ctlPeltier_s, pwmMotor_s, airflow_s, fanCooler);
 
                 printf("EM electric, EM magnetic, EM heat = %d %d %d\n", ehm_freq_electric,
                        ehm_freq_magnetic,
