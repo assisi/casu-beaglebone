@@ -10,7 +10,8 @@
 using namespace std;
 
 CASU_Interface::CASU_Interface(const std::string& name, 
-                               int bus, int picAddress)
+                               int bus, int picAddress,
+                               const std::string& cal_file)
     : casuName(name)
 	{
 
@@ -84,6 +85,21 @@ CASU_Interface::CASU_Interface(const std::string& name,
 	 * pwm = k2 * f = 0.0058*30.303 = 0.1758
 	* */
 	vibeMotorConst = 0.1758;
+
+    if (~cal_file.empty()) {
+        std::cout << "Using calibration file: " << cal_file << std::endl;
+        YAML::Node cal = YAML::LoadFile(cal_file.c_str());
+        tempCtlOn = cal["tempCtlOn"].as<int>();
+        Kp = cal["Kp"].as<float>();
+        Ki = cal["Ki"].as<float>();
+        Kf1 = cal["Kf1"].as<float>();
+        Kf2 = cal["Kf2"].as<float>();
+        Kf3 = cal["Kf3"].as<float>();
+        fanCtlOn = cal["fanCtlOn"].as<int>();
+    }
+    {
+        std::cout << "Using default calibration params" << std::endl;
+    }
 
     log_file.open((std::string("log/") + casuName + std::string(".txt")).c_str(), ios::out);
 }

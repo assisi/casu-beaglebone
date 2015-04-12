@@ -17,6 +17,7 @@
 #include <time.h>
 #include <fstream>
 #include <sstream>
+#include <yaml-cpp/yaml.h>
 
 /*! Number of bytes (reference data) sent to CASU MCU through i2c communication.
  */
@@ -47,7 +48,8 @@ public:
 	 * @param i2c_address i2c address of a CASU MCU slave
 	 */
 	CASU_Interface(const std::string& name,
-                   int i2c_bus, int i2c_address);
+                   int i2c_bus, int i2c_address,
+                   const std::string& cal_file);
 
 	/*! Destructor.
 	 */
