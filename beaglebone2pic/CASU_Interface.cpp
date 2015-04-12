@@ -58,14 +58,15 @@ CASU_Interface::CASU_Interface(const std::string& name,
 
     fanCooler = 0;
 
-	temp_ref = 0;
+    temp_ref = 25.0;
 
     calRec = 0;
+    calSend = 0;
     Kp = 4;
     Ki = 0.2;
-    Kf1 = 0.9832;
+    Kf1 = 0.00828;
     Kf2 = 0.00828;
-    Kf3 = 0.00828;
+    Kf3 = 0.9832;
     tempCtlOn = 1;
     fanCtlOn = 1;
 
@@ -290,7 +291,7 @@ void CASU_Interface::i2cComm() {
         status = i2cPIC.sendData(outBuff, OUT_REF_DATA_NUM);
         usleep(50000);
 
-        if (calRec == 0) {
+        if (calRec == 0 || calSend == 0) {
             outBuff[0] = 2;
             outBuff[1] = tempCtlOn;
             int tmp = Kp * 10;
@@ -300,18 +301,19 @@ void CASU_Interface::i2cComm() {
             tmp = Ki * 1000;
             outBuff[4] = (tmp & 0x00FF);
             outBuff[5] = (tmp & 0xFF00) >> 8;
-            tmp = Kf1 * 10000;
+            tmp = Kf1 * 100000;
             outBuff[6] = (tmp & 0x00FF);
             outBuff[7] = (tmp & 0xFF00) >> 8;
             tmp = Kf2 * 100000;
             outBuff[8] = (tmp & 0x00FF);
             outBuff[9] = (tmp & 0xFF00) >> 8;
-            tmp = Kf3 * 100000;
+            tmp = Kf3 * 10000;
             outBuff[10] = (tmp & 0x00FF);
             outBuff[11] = (tmp & 0xFF00) >> 8;
             outBuff[12] = fanCtlOn;
             status = i2cPIC.sendData(outBuff, OUT_CAL_DATA_NUM);
             usleep(50000);
+            calSend = 1;
         }
 	}
 }

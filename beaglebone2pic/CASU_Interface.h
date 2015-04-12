@@ -125,7 +125,8 @@ private:
 	char inBuff[60]; /*!< Buffer for i2c incoming data. */
 	unsigned int dummy; /*!< Variable used for storing temporarily byte of incoming data.*/
 	char status; /*!< Status variable. */
-    int calRec; /*!< Status variable for calibration data. 1 - data received, 0 - data not yet received */
+    int calRec; /*!< Status variable for receive notification of calibration data. 1 - data received, 0 - data not yet received */
+    int calSend; /*!< Status variable for sending calibration data. 1 - data sent, 0 - data not yet sent */
 	float temp[5]; /*!< Array containing latest temperature values from five sensors. */
     float tempWax; /*!< Estimated wax temperature. */
     float tempCasu; /*!< Estimated casu ring temperature. */
@@ -147,9 +148,9 @@ private:
 
     float Kp; /*!< Proportional gain of PI controller */
     float Ki; /*!< Integral gain of PI controller */
-    float Kf1; /*!< Weight of old output value of discrete PT1 filter for wax temperature */
-    float Kf2; /*!< Weight of current input value of discrete PT1 filter for wax temperature */
-    float Kf3; /*!< Weight of old input value of discrete PT1 filter for wax temperature */
+    float Kf1; /*!< Weight of current input value of discrete PT1 filter for wax temperature */
+    float Kf2; /*!< Weight of old input value of discrete PT1 filter for wax temperature */
+    float Kf3; /*!< Weight of old output value of discrete PT1 filter for wax temperature */
     int tempCtlOn; /*!< Temperature control on/off flag */
     int fanCtlOn;  /*!< Fan control on/off flag */
 
