@@ -18,13 +18,17 @@
 #include <fstream>
 #include <sstream>
 
-/*! Number of bytes sent to CASU MCU through i2c communication.
+/*! Number of bytes (reference data) sent to CASU MCU through i2c communication.
  */
-#define OUT_DATA_NUM 11
+#define OUT_REF_DATA_NUM 12
+
+/*! Number of bytes (calibration data) sent to CASU MCU through i2c communication.
+ */
+#define OUT_CAL_DATA_NUM 13
 
 /*! Number of bytes received from CASU MCU through i2c communication.
  */
-#define IN_DATA_NUM 52
+#define IN_DATA_NUM 55
 
 /*! \brief Implements communication with CASU microcontroller (MCU), communication with a user code (CASU controller) and data logging.
  *
@@ -119,8 +123,10 @@ private:
 	char inBuff[60]; /*!< Buffer for i2c incoming data. */
 	unsigned int dummy; /*!< Variable used for storing temporarily byte of incoming data.*/
 	char status; /*!< Status variable. */
+    int calRec; /*!< Status variable for calibration data. 1 - data received, 0 - data not yet received */
 	float temp[5]; /*!< Array containing latest temperature values from five sensors. */
     float tempWax; /*!< Estimated wax temperature. */
+    float tempCasu; /*!< Estimated casu ring temperature. */
 	float vAmp[4]; /*!< Array containing latest vibration amplitude values from four sensors. */
 	float vFreq[4]; /*!< Array containing latest vibration frequency values from four sensors. */
 	int irRawVals[7]; /*!< Array containing latest infra-red proximity values from seven sensors. */
@@ -136,6 +142,14 @@ private:
 	int ledDiag_r[3]; /*!< Actual reference values (RGB) for diagnostic LED. */
 	int pwmMotor_r; /*!< Actual reference value for vibration motor. */
     int airflow_r; /*!< Actual reference value for actuator producing airflow. */
+
+    float Kp; /*!< Proportional gain of PI controller */
+    float Ki; /*!< Integral gain of PI controller */
+    float Kf1; /*!< Weight of old output value of discrete PT1 filter for wax temperature */
+    float Kf2; /*!< Weight of current input value of discrete PT1 filter for wax temperature */
+    float Kf3; /*!< Weight of old input value of discrete PT1 filter for wax temperature */
+    int tempCtlOn; /*!< Temperature control on/off flag */
+    int fanCtlOn;  /*!< Fan control on/off flag */
 
 	int proxyThresh; /*!< Proximity sensor threshold. */
     std::string casuName; /*!< Used for storing CASU name. */

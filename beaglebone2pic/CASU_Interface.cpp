@@ -38,6 +38,7 @@ CASU_Interface::CASU_Interface(const std::string& name,
 	temp[3] = 103;
 	temp[4] = 104;
     tempWax = -1;
+    tempCasu = -1;
 
 	vAmp[0] = 0.1;
 	vAmp[1] = 0.2;
@@ -57,6 +58,15 @@ CASU_Interface::CASU_Interface(const std::string& name,
     fanCooler = 0;
 
 	temp_ref = 0;
+
+    calRec = 0;
+    Kp = 4;
+    Ki = 0.2;
+    Kf1 = 0.9832;
+    Kf2 = 0.00828;
+    Kf3 = 0.00828;
+    tempCtlOn = 1;
+    fanCtlOn = 1;
 
 	proxyThresh = 4000;
 
@@ -90,7 +100,7 @@ void CASU_Interface::i2cComm() {
 	std::stringstream ss;
 	gettimeofday(&start_time, NULL);
 	timeval current_time;
-    sprintf(str_buff, "time temp_f temp_r temp_b temp_l temp_top temp_wax temp_ref pelt mot fanAir fanCool \
+    sprintf(str_buff, "time temp_f temp_r temp_b temp_l temp_pcb temp_casu temp_wax temp_ref pelt mot fanAir fanCool \
             proxi_f proxi_fr proxi_br proxi_b proxi_bl proxi_fl \n");
 	log_file.write(str_buff, strlen(str_buff));
 	while(1) {
@@ -169,26 +179,34 @@ void CASU_Interface::i2cComm() {
 
             dummy = inBuff[50] | (inBuff[51] << 8);
             if (dummy > 32767)
+                tempCasu= (dummy - 65536.0) / 10.0;
+            else
+                tempCasu = dummy / 10.0;
+
+            dummy = inBuff[52] | (inBuff[53] << 8);
+            if (dummy > 32767)
                 tempWax = (dummy - 65536.0) / 10.0;
             else
                 tempWax = dummy / 10.0;
 
+            calRec = inBuff[54];
+
 			this->mtxPub_.unlock();
 			gettimeofday(&current_time, NULL);
 			double t_msec = (current_time.tv_sec - start_time.tv_sec) * 1000 + (current_time.tv_usec - start_time.tv_usec)/1000;
-            sprintf(str_buff, "%.2f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %d %d %d %d %d %d %d %d %d %d \n",
-                    t_msec / 1000, temp[T_F], temp[T_R], temp[T_B], temp[T_L], temp[T_T], tempWax, temp_ref,
+            sprintf(str_buff, "%.2f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %d %d %d %d %d %d %d %d %d %d \n",
+                    t_msec / 1000, temp[T_F], temp[T_R], temp[T_B], temp[T_L], temp[T_T], tempCasu, tempWax, temp_ref,
                     ctlPeltier_s, pwmMotor_s, airflow_s, fanCooler,
                     irRawVals[IR_F], irRawVals[IR_FR], irRawVals[IR_BR], irRawVals[IR_B], irRawVals[IR_BL], irRawVals[IR_FL]);
 			log_file.write(str_buff, strlen(str_buff));
 			log_file.flush();
 			print_counter++;
-			if (print_counter == 20) {
+            if (print_counter == 10) {
 				printf("temp = ");
 				for (int i = 0; i < 5; i++) {
 					printf("%.1f ", temp[i]);
 				}
-                printf("%.1f ", tempWax);
+                printf("%.1f %.1f %.1f", tempCasu, tempWax, temp_ref);
 				printf("\n");
 
 				printf("vibeAmp = ");
@@ -226,33 +244,59 @@ void CASU_Interface::i2cComm() {
                 printf("EM electric, EM magnetic, EM heat = %d %d %d\n", ehm_freq_electric,
                        ehm_freq_magnetic,
                        ehm_temp);
+                printf("calibration data rec = %d \n", calRec);
 				printf("_________________________________________________________________\n\n");
 				print_counter = 0;
 			}
 		}
-
+        usleep(50000);
 		this->mtxSub_.lock();
+        outBuff[0] = 3;
 		int tmp = temp_ref * 10;
 		if (tmp < 0) tmp = tmp + 65536;
 		//printf("Sending temperature %d \n", tmp);
-		outBuff[0] = (tmp & 0x00FF);
-		outBuff[1] = (tmp & 0xFF00) >> 8;
+        outBuff[1] = (tmp & 0x00FF);
+        outBuff[2] = (tmp & 0xFF00) >> 8;
 
-		outBuff[2] = pwmMotor_r & 0x00FF;
-		outBuff[3] = (pwmMotor_r & 0xFF00) >> 8;
+        outBuff[3] = pwmMotor_r & 0x00FF;
+        outBuff[4] = (pwmMotor_r & 0xFF00) >> 8;
 
-		outBuff[4] = ledCtl_r[0];
-		outBuff[5] = ledCtl_r[1];
-		outBuff[6] = ledCtl_r[2];
+        outBuff[5] = ledCtl_r[0];
+        outBuff[6] = ledCtl_r[1];
+        outBuff[7] = ledCtl_r[2];
 
-		outBuff[7] = ledDiag_r[0];
-		outBuff[8] = ledDiag_r[1];
-		outBuff[9] = ledDiag_r[2];
+        outBuff[8] = ledDiag_r[0];
+        outBuff[9] = ledDiag_r[1];
+        outBuff[10] = ledDiag_r[2];
 
-        outBuff[10] = airflow_r;
+        outBuff[11] = airflow_r;
 		this->mtxSub_.unlock();
-		status = i2cPIC.sendData(outBuff, OUT_DATA_NUM);
-		//usleep(150000);
+        status = i2cPIC.sendData(outBuff, OUT_REF_DATA_NUM);
+        usleep(50000);
+
+        if (calRec == 0) {
+            outBuff[0] = 2;
+            outBuff[1] = tempCtlOn;
+            int tmp = Kp * 10;
+            //printf("Sending temperature %d \n", tmp);
+            outBuff[2] = (tmp & 0x00FF);
+            outBuff[3] = (tmp & 0xFF00) >> 8;
+            tmp = Ki * 1000;
+            outBuff[4] = (tmp & 0x00FF);
+            outBuff[5] = (tmp & 0xFF00) >> 8;
+            tmp = Kf1 * 10000;
+            outBuff[6] = (tmp & 0x00FF);
+            outBuff[7] = (tmp & 0xFF00) >> 8;
+            tmp = Kf2 * 100000;
+            outBuff[8] = (tmp & 0x00FF);
+            outBuff[9] = (tmp & 0xFF00) >> 8;
+            tmp = Kf3 * 100000;
+            outBuff[10] = (tmp & 0x00FF);
+            outBuff[11] = (tmp & 0xFF00) >> 8;
+            outBuff[12] = fanCtlOn;
+            status = i2cPIC.sendData(outBuff, OUT_CAL_DATA_NUM);
+            usleep(50000);
+        }
 	}
 }
 
