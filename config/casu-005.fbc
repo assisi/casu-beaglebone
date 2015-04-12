@@ -15,3 +15,6 @@ sub_addr : tcp://*:1556
 
 # Hardware address on I2C bus
 i2c_addr : 0x11
+
+# Casu calibration file
+cal_file : casu-005.cal
