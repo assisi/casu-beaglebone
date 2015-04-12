@@ -31,19 +31,12 @@ int main(int argc, char **argv) {
         exit(1);
     }
 
-    YAML::Node fbc = YAML::LoadFile(argv[1]);
-    string name = fbc["name"].as<string>();
-    string pub_addr = fbc["pub_addr"].as<string>();
-    string sub_addr = fbc["sub_addr"].as<string>();
-    int i2c_addr = fbc["i2c_addr"].as<int>();
-    string cal_file = fbc["cal_file"].as<string>();
-
-    CASU_Interface BBBintf(name, 2, i2c_addr, cal_file);
+    CASU_Interface BBBintf(argv[1]);
 
 	boost::thread_group threads;
 	threads.create_thread(boost::bind(&CASU_Interface::i2cComm, &BBBintf));
-	threads.create_thread(boost::bind(&CASU_Interface::zmqPub, &BBBintf, pub_addr));
-	threads.create_thread(boost::bind(&CASU_Interface::zmqSub, &BBBintf, sub_addr));
+    threads.create_thread(boost::bind(&CASU_Interface::zmqPub, &BBBintf));
+    threads.create_thread(boost::bind(&CASU_Interface::zmqSub, &BBBintf));
 	threads.join_all();
 
 	return 0;

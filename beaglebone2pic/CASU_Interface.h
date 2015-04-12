@@ -44,12 +44,9 @@ public:
 
 	/*! \brief Constructor.
 	 *
-	 * @param i2c_bus number of an i2c bus used for communication with MCU
-	 * @param i2c_address i2c address of a CASU MCU slave
+     * @param fbc_file Firmware board configuration file
 	 */
-	CASU_Interface(const std::string& name,
-                   int i2c_bus, int i2c_address,
-                   const std::string& cal_file);
+    CASU_Interface(char *fbc_file);
 
 	/*! Destructor.
 	 */
@@ -103,14 +100,14 @@ public:
 	 * Function sends data received from CASU MCU (such as temperature value, vibration frequency and etc.).
 	 * Data is formed in protobuf messages and sent using ZMQ protocol.
 	 */
-	void zmqPub(const std::string& pub_addr);
+    void zmqPub();
 
 	/*! Thread safe method that receives messages using ZMQ protocol.
 	 *
 	 * Function receives data from user code and/or GUI (such as temperature reference, vibration frequency reference and etc.).
 	 * Data is received through ZMQ midlleware in a form of protobuf messages.
 	 */
-	void zmqSub(const std::string& sub_addr);
+    void zmqSub();
 
 private:
 
@@ -153,6 +150,11 @@ private:
     float Kf3; /*!< Weight of old output value of discrete PT1 filter for wax temperature */
     int tempCtlOn; /*!< Temperature control on/off flag */
     int fanCtlOn;  /*!< Fan control on/off flag */
+
+    std::string pub_addr; /*!< Address for publising zmq messages */
+    std::string sub_addr; /*!< Address for subscribing to zmq messages */
+    int i2c_bus;      /*!< The number of i2c bus being used for communication with dsPIC */
+    int picAddress;  /*!< I2C address of dsPIC MCU */
 
 	int proxyThresh; /*!< Proximity sensor threshold. */
     std::string casuName; /*!< Used for storing CASU name. */

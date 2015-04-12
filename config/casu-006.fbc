@@ -13,8 +13,29 @@ pub_addr : tcp://*:2555
 # Corresponds to the "pub_addr" in RTC files
 sub_addr : tcp://*:2556
 
+# The number of I2C bus on beaglebone being used for communication.
+i2c_bus : 2
+
 # Hardware address on I2C bus
 i2c_addr : 0x12
 
-# Casu calibration file
-cal_file : casu-006.cal
+# Flag determines if temp control will run, 1 - on, 0 - off
+tempCtlOn : 1
+
+# Proportional gain of PI controller
+Kp : 4
+
+# Integral gain of PI controller
+Ki : 0.2
+
+# Weight of current casu ring in computation of discrete PT1 filter for wax temperature */
+Kf1 : 0.00828
+
+# Weight of old casu ring temp in computation of PT1 filter for wax temperature */
+Kf2 : 0.00828 
+
+# Weight of old wax temp in computation of discrete PT1 filter for wax temperature */
+Kf3 : 0.9832
+
+# Flag determines if fan for cooling casu will runn, 1 - on, 0 - off
+fanCtlOn : 1

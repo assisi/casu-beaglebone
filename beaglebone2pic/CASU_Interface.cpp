@@ -9,13 +9,24 @@
 
 using namespace std;
 
-CASU_Interface::CASU_Interface(const std::string& name, 
-                               int bus, int picAddress,
-                               const std::string& cal_file)
-    : casuName(name)
+CASU_Interface::CASU_Interface(char *fbc_file)
 	{
 
-	i2cPIC.initI2C(bus, picAddress);
+    YAML::Node fbc = YAML::LoadFile(fbc_file);
+    casuName = fbc["name"].as<string>();
+    pub_addr = fbc["pub_addr"].as<string>();
+    sub_addr = fbc["sub_addr"].as<string>();
+    i2c_bus = fbc["i2c_bus"].as<int>();
+    picAddress = fbc["i2c_addr"].as<int>();
+    tempCtlOn = fbc["tempCtlOn"].as<int>();
+    Kp = fbc["Kp"].as<float>();
+    Ki = fbc["Ki"].as<float>();
+    Kf1 = fbc["Kf1"].as<float>();
+    Kf2 = fbc["Kf2"].as<float>();
+    Kf3 = fbc["Kf3"].as<float>();
+    fanCtlOn = fbc["fanCtlOn"].as<int>();
+
+    i2cPIC.initI2C(i2c_bus, picAddress);
 	zmqContext = new zmq::context_t(2);
 	ledDiag_r[L_R] = 0;
 	ledDiag_r[L_G] = 0;
@@ -86,21 +97,6 @@ CASU_Interface::CASU_Interface(const std::string& name,
 	 * pwm = k2 * f = 0.0058*30.303 = 0.1758
 	* */
 	vibeMotorConst = 0.1758;
-
-    if (~cal_file.empty()) {
-        std::cout << "Using calibration file: " << cal_file << std::endl;
-        YAML::Node cal = YAML::LoadFile(cal_file.c_str());
-        tempCtlOn = cal["tempCtlOn"].as<int>();
-        Kp = cal["Kp"].as<float>();
-        Ki = cal["Ki"].as<float>();
-        Kf1 = cal["Kf1"].as<float>();
-        Kf2 = cal["Kf2"].as<float>();
-        Kf3 = cal["Kf3"].as<float>();
-        fanCtlOn = cal["fanCtlOn"].as<int>();
-    }
-    {
-        std::cout << "Using default calibration params" << std::endl;
-    }
 
     log_file.open((std::string("log/") + casuName + std::string(".txt")).c_str(), ios::out);
 }
@@ -318,7 +314,7 @@ void CASU_Interface::i2cComm() {
 	}
 }
 
-void CASU_Interface::zmqPub(const std::string& pub_addr) {
+void CASU_Interface::zmqPub() {
 
 	zmq::socket_t zmqPub(*zmqContext, ZMQ_PUB);
 	zmqPub.bind(pub_addr.c_str());
@@ -391,7 +387,7 @@ void CASU_Interface::zmqPub(const std::string& pub_addr) {
 	}
 }
 
-void CASU_Interface::zmqSub(const std::string& sub_addr) 
+void CASU_Interface::zmqSub()
 {
 
 	zmq::socket_t zmqSub(*zmqContext, ZMQ_SUB);
