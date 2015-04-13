@@ -73,13 +73,6 @@ CASU_Interface::CASU_Interface(char *fbc_file)
 
     calRec = 0;
     calSend = 0;
-    Kp = 4;
-    Ki = 0.2;
-    Kf1 = 0.00828;
-    Kf2 = 0.00828;
-    Kf3 = 0.9832;
-    tempCtlOn = 1;
-    fanCtlOn = 1;
 
 	proxyThresh = 4000;
 
