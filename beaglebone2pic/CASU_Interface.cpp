@@ -91,7 +91,7 @@ CASU_Interface::CASU_Interface(char *fbc_file)
 	* */
 	vibeMotorConst = 0.1758;
 
-    log_file.open((std::string("log/") + casuName + std::string(".txt")).c_str(), ios::out);
+    log_file.open((std::string("/home/assisi/firmware/log/") + casuName + std::string(".txt")).c_str(), ios::out);
 }
 
 CASU_Interface::~CASU_Interface() {
