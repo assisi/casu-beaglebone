@@ -174,6 +174,7 @@ int I2C_Device::writeBuff(char *buff, int bytesNum) {
 
 int I2C_Device::readBuff(char *buff, int bytesNum) {
 
+    int bytesRead = 0;
 	// open the i2c address
 	char busName[bufferSize];
 	sprintf(busName, "/dev/i2c-%d", i2cBus);
@@ -189,8 +190,9 @@ int I2C_Device::readBuff(char *buff, int bytesNum) {
 		return -1;
 	}
 
-	if (read(file, buff, bytesNum) != bytesNum) {
-		cerr << "Failure to read value from I2C Device address." << endl;
+    bytesRead = read(file, buff, bytesNum);
+    if (bytesRead != bytesNum) {
+        cerr << "Failed to read "<< bytesNum << " bytes from I2C bus. " << "Read "<< bytesRead << " bytes." << endl;
 		close(file);
 		return -3;
 	}

@@ -29,7 +29,7 @@
 
 /*! Number of bytes received from CASU MCU through i2c communication.
  */
-#define IN_DATA_NUM 55
+#define IN_DATA_NUM 2048
 
 /*! \brief Implements communication with CASU microcontroller (MCU), communication with a user code (CASU controller) and data logging.
  *
@@ -119,7 +119,7 @@ private:
 	EHM *ehm_device;	 /*!< Used for serial communication with electro-magnetic emitter control board. */
 
 	char outBuff[20]; /*!< Buffer for i2c outgoing data.  */
-	char inBuff[60]; /*!< Buffer for i2c incoming data. */
+    char inBuff[3000]; /*!< Buffer for i2c incoming data. */
 	unsigned int dummy; /*!< Variable used for storing temporarily byte of incoming data.*/
 	char status; /*!< Status variable. */
     int calRec; /*!< Status variable for receive notification of calibration data. 1 - data received, 0 - data not yet received */

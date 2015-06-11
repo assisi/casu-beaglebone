@@ -35,8 +35,8 @@ int main(int argc, char **argv) {
 
 	boost::thread_group threads;
 	threads.create_thread(boost::bind(&CASU_Interface::i2cComm, &BBBintf));
-    threads.create_thread(boost::bind(&CASU_Interface::zmqPub, &BBBintf));
-    threads.create_thread(boost::bind(&CASU_Interface::zmqSub, &BBBintf));
+    //threads.create_thread(boost::bind(&CASU_Interface::zmqPub, &BBBintf));
+    //threads.create_thread(boost::bind(&CASU_Interface::zmqSub, &BBBintf));
 	threads.join_all();
 
 	return 0;
