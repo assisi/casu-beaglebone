@@ -29,7 +29,7 @@
 
 /*! Number of bytes received from CASU MCU through i2c communication.
  */
-#define IN_DATA_NUM 55
+#define IN_DATA_NUM 59
 
 /*! \brief Implements communication with CASU microcontroller (MCU), communication with a user code (CASU controller) and data logging.
  *
@@ -138,6 +138,8 @@ private:
     int fanCooler; /*!< Latest PWM value (0,100) set to the fan which cools the PCB and aluminium cooler. */
 
 	float temp_ref; /*!< Actual reference value for CASU temperature. */
+    float temp_ref_rec; /*!< Setted feference value for CASU temperature received from dsPIC. */
+    float temp_ref_cur; /*!< Actual reference value for CASU temperature received from dsPIC. */
 	int ledCtl_r[3]; /*!< Actual reference values (RGB) for control LED. */
 	int ledDiag_r[3]; /*!< Actual reference values (RGB) for diagnostic LED. */
 	int pwmMotor_r; /*!< Actual reference value for vibration motor. */

@@ -70,6 +70,8 @@ CASU_Interface::CASU_Interface(char *fbc_file)
     fanCooler = 0;
 
     temp_ref = 25.0;
+    temp_ref_rec = 0.0;
+    temp_ref_cur = 0.0;
 
     calRec = 0;
     calSend = 0;
@@ -195,13 +197,25 @@ void CASU_Interface::i2cComm() {
             else
                 tempWax = dummy / 10.0;
 
-            calRec = inBuff[54];
+            dummy = inBuff[54] | (inBuff[55] << 8);
+            if (dummy > 32767)
+                temp_ref_rec = (dummy - 65536.0) / 10.0;
+            else
+                temp_ref_rec = dummy / 10.0;
+
+            dummy = inBuff[56] | (inBuff[57] << 8);
+            if (dummy > 32767)
+                temp_ref_cur = (dummy - 65536.0) / 10.0;
+            else
+                temp_ref_cur = dummy / 10.0;
+
+            calRec = inBuff[58];
 
 			this->mtxPub_.unlock();
 			gettimeofday(&current_time, NULL);
 			double t_msec = (current_time.tv_sec - start_time.tv_sec) * 1000 + (current_time.tv_usec - start_time.tv_usec)/1000;
-            sprintf(str_buff, "%.2f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %d %d %d %d %d %d %d %d %d %d \n",
-                    t_msec / 1000, temp[T_F], temp[T_R], temp[T_B], temp[T_L], temp[T_T], tempCasu, tempWax, temp_ref,
+            sprintf(str_buff, "%.2f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %d %d %d %d %d %d %d %d %d %d \n",
+                    t_msec / 1000, temp[T_F], temp[T_R], temp[T_B], temp[T_L], temp[T_T], tempCasu, tempWax, temp_ref_rec, temp_ref_cur,
                     ctlPeltier_s, pwmMotor_s, airflow_s, fanCooler,
                     irRawVals[IR_F], irRawVals[IR_FR], irRawVals[IR_BR], irRawVals[IR_B], irRawVals[IR_BL], irRawVals[IR_FL]);
 			log_file.write(str_buff, strlen(str_buff));
@@ -212,7 +226,7 @@ void CASU_Interface::i2cComm() {
 				for (int i = 0; i < 5; i++) {
 					printf("%.1f ", temp[i]);
 				}
-                printf("%.1f %.1f %.1f", tempCasu, tempWax, temp_ref);
+                printf("%.1f %.1f %.1f %.1f", tempCasu, tempWax, temp_ref_rec, temp_ref_cur);
 				printf("\n");
 
 				printf("vibeAmp = ");
@@ -326,10 +340,12 @@ void CASU_Interface::zmqPub() {
 	}
 	AssisiMsg::TemperatureArray temps;
 
-	for(int i = 0; i < 5; i++) {
+    for(int i = 0; i < 7; i++) {
 		temps.add_temp(0);
 	}
 
+    AssisiMsg::Temperature peltier;
+    std::string peltMsg;
 
 	while (1) {
 
@@ -354,15 +370,29 @@ void CASU_Interface::zmqPub() {
 			for(int i = 0; i < 5; i++) {
 				temps.set_temp(i, temp[i]);
 			}
+            temps.set_temp(5, tempCasu);
+            temps.set_temp(6, tempWax);
 			this->mtxPub_.unlock();
 			temps.SerializeToString(&data);
 			zmq::send_multipart(zmqPub, casuName.c_str(), "Temp", "Temperatures", data);
 			//printf("Sending temp data %.1f %.1f %.1f %.1f %.1f \n", temps.temp(0), temps.temp(1), temps.temp(2), temps.temp(3), temps.temp(4));
 
+            this->mtxPub_.lock();
+            peltier.set_temp(this->temp_ref_rec);
+            if (this->temp_ref_rec < 26) {
+                peltMsg = "Off";
+            }
+            else {
+                peltMsg = "On";
+            }
+            this->mtxPub_.unlock();
+            peltier.SerializeToString(&data);
+            zmq::send_multipart(zmqPub, casuName.c_str(), "Peltier", peltMsg.c_str(), data);
+
 			AssisiMsg::VibrationReadingArray vibes;
 			AssisiMsg::VibrationReading *vibe;
-			this->mtxPub_.lock();
 
+            this->mtxPub_.lock();
 			for(int i = 0; i < 4; i++) {
 				vibe = vibes.add_reading();
 				vibe->add_amplitude(vAmp[i]);
@@ -462,9 +492,10 @@ void CASU_Interface::zmqSub()
 					AssisiMsg::VibrationSetpoint vibe;
 					assert(vibe.ParseFromString(data));
 					mtxSub_.lock();
-					pwmMotor_r = vibe.freq() * vibeMotorConst;
-					mtxSub_.unlock();
-					printf(" Frequency, pwm %f, %d \n", vibe.freq(), pwmMotor_r);
+                    //pwmMotor_r = vibe.freq() * vibeMotorConst;
+                    pwmMotor_r = vibe.amplitude();
+                    mtxSub_.unlock();
+                    printf(" Vibe pwm  %d \n", pwmMotor_r);
 				}
 				else if (command == "Off") {
 					mtxSub_.lock();
