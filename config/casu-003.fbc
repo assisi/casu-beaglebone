@@ -23,10 +23,10 @@ i2c_addr : 0x11
 tempCtlOn : 1
 
 # Proportional gain of PI controller
-Kp : 20
+Kp : 4
 
 # Integral gain of PI controller
-Ki : 1.8
+Ki : 0.2
 
 # Weight of current casu ring in computation of discrete PT1 filter for wax tem$
 Kf1 : 0.1029
