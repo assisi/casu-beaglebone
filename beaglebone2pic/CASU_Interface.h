@@ -29,7 +29,7 @@
 
 /*! Number of bytes received from CASU MCU through i2c communication.
  */
-#define IN_DATA_NUM 2048
+#define IN_DATA_NUM 512 // 256 * 2
 
 /*! \brief Implements communication with CASU microcontroller (MCU), communication with a user code (CASU controller) and data logging.
  *
