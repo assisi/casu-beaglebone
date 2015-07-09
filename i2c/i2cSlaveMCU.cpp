@@ -39,7 +39,7 @@ int I2C_SlaveMCU::receiveData(char *buff, int bytesNum) {
 		status = readBuff(buff, bytesNum);
 		count++;
 		if (count == 1000) {
-			cerr << "Waiting for incoming data" << endl;
+            cerr << "Waiting for incoming data" << endl;
 			count = 0;
 		}
 	}

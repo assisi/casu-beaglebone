@@ -17,7 +17,8 @@ CASU_Interface::CASU_Interface(char *fbc_file)
     pub_addr = fbc["pub_addr"].as<string>();
     sub_addr = fbc["sub_addr"].as<string>();
     i2c_bus = fbc["i2c_bus"].as<int>();
-    picAddress = fbc["i2c_addr"].as<int>();
+    pic1Address = fbc["pic1_addr"].as<int>();
+    pic2Address = fbc["pic2_addr"].as<int>();
     tempCtlOn = fbc["tempCtlOn"].as<int>();
     Kp = fbc["Kp"].as<float>();
     Ki = fbc["Ki"].as<float>();
@@ -26,7 +27,8 @@ CASU_Interface::CASU_Interface(char *fbc_file)
     Kf3 = fbc["Kf3"].as<float>();
     fanCtlOn = fbc["fanCtlOn"].as<int>();
 
-    i2cPIC.initI2C(i2c_bus, picAddress);
+    i2cPIC1.initI2C(i2c_bus, pic1Address);
+    i2cPIC2.initI2C(i2c_bus, pic2Address);
 	zmqContext = new zmq::context_t(2);
 	ledDiag_r[L_R] = 0;
 	ledDiag_r[L_G] = 0;
@@ -63,6 +65,11 @@ CASU_Interface::CASU_Interface(char *fbc_file)
 	vFreq[3] = 40.0;
 
 	pwmMotor_r = 0;
+
+    vibeAmp_r = 0;
+    vibeAmp_s = 0;
+    vibeFreq_r = 0;
+    vibeFreq_s = 0;
 
     airflow_r = 0;
     airflow_s = 0;
@@ -112,15 +119,15 @@ void CASU_Interface::i2cComm() {
             proxi_f proxi_fr proxi_br proxi_b proxi_bl proxi_fl \n");
 	log_file.write(str_buff, strlen(str_buff));
 	while(1) {
-		status = i2cPIC.receiveData(inBuff, IN_DATA_NUM);
+
+        status = i2cPIC1.receiveData(inBuff, IN1_DATA_NUM);
 
 		if (status <= 0) {
-			cerr << "I2C initialization unsuccessful, exiting thread" << std::endl;
+            printf("Failed to receive data from the main MCU");
+            cerr << "Main I2C initialization unsuccessful, exiting thread" << std::endl;
 			break;
 		}
 		else {
-
-            //cout << "Read bytes: " << IN_DATA_NUM << std::endl;
 
 			this->mtxPub_.lock();
 			dummy = inBuff[0] | (inBuff[1] << 8);
@@ -259,7 +266,7 @@ void CASU_Interface::i2cComm() {
 				}
 				printf("\n");
 
-                printf("peltier, motor, fan, fanCooler = %d %d %d %d\n", ctlPeltier_s, pwmMotor_s, airflow_s, fanCooler);
+                printf("peltier, vibeFreq, vibeAmp, fan, fanCooler = %d %d %d %d\n", ctlPeltier_s, vibeFreq_s, vibeAmp_s, airflow_s, fanCooler);
 
                 printf("EM electric, EM magnetic, EM heat = %d %d %d\n", ehm_freq_electric,
                        ehm_freq_magnetic,
@@ -269,6 +276,7 @@ void CASU_Interface::i2cComm() {
 				print_counter = 0;
 			}
 		}
+
         usleep(50000);
 		this->mtxSub_.lock();
         outBuff[0] = 3;
@@ -291,8 +299,31 @@ void CASU_Interface::i2cComm() {
 
         outBuff[11] = airflow_r;
 		this->mtxSub_.unlock();
-        status = i2cPIC.sendData(outBuff, OUT_REF_DATA_NUM);
+        status = i2cPIC1.sendData(outBuff, OUT1_REF_DATA_NUM);
         usleep(50000);
+
+        status = i2cPIC2.receiveData(inBuff, IN2_DATA_NUM);
+
+        if (status <= 0) {
+            printf("Failed to receive data from aux pic");
+        }
+        else {
+            this->mtxPub_.lock();
+            vibeFreq_s = inBuff[0] | (inBuff[1] << 8);
+            vibeAmp_s = inBuff[2] | (inBuff[3] << 8);
+            this->mtxPub_.unlock();
+        }
+
+        usleep(50000);
+
+        this->mtxSub_.lock();
+        outBuff[0] = 3;
+        outBuff[1] = vibeFreq_r & 0x00FF;
+        outBuff[2] = (vibeFreq_r & 0xFF00) >> 8;
+        outBuff[3] = vibeAmp_r & 0x00FF;
+        outBuff[4] = (vibeAmp_r & 0xFF00) >> 8;
+        this->mtxSub_.unlock();
+        status = i2cPIC2.sendData(outBuff, OUT2_REF_DATA_NUM);
 
         if (calRec == 0 || calSend == 0) {
             outBuff[0] = 2;
@@ -317,7 +348,7 @@ void CASU_Interface::i2cComm() {
             outBuff[10] = (tmp & 0x00FF);
             outBuff[11] = (tmp & 0xFF00) >> 8;
             outBuff[12] = fanCtlOn;
-            status = i2cPIC.sendData(outBuff, OUT_CAL_DATA_NUM);
+            status = i2cPIC1.sendData(outBuff, OUT1_CAL_DATA_NUM);
             usleep(50000);
             calSend = 1;
         }
@@ -493,13 +524,15 @@ void CASU_Interface::zmqSub()
 					assert(vibe.ParseFromString(data));
 					mtxSub_.lock();
                     //pwmMotor_r = vibe.freq() * vibeMotorConst;
-                    pwmMotor_r = vibe.amplitude();
+                    vibeAmp_r = vibe.amplitude();
+                    vibeFreq_r = vibe.freq();
                     mtxSub_.unlock();
-                    printf(" Vibe pwm  %d \n", pwmMotor_r);
+                    printf(" Vibe freq, pwm  %d %d\n", vibeAmp_r, vibeFreq_r);
 				}
 				else if (command == "Off") {
 					mtxSub_.lock();
-					pwmMotor_r = 0;
+                    vibeAmp_r = 0;
+                    vibeFreq_r = 0;
 					mtxSub_.unlock();
 				}
 				else {

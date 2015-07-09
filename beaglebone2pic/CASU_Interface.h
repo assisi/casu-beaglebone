@@ -19,17 +19,25 @@
 #include <sstream>
 #include <yaml-cpp/yaml.h>
 
-/*! Number of bytes (reference data) sent to CASU MCU through i2c communication.
+/*! Number of bytes (reference data) sent to the main CASU MCU through i2c communication.
  */
-#define OUT_REF_DATA_NUM 12
+#define OUT1_REF_DATA_NUM 12
 
-/*! Number of bytes (calibration data) sent to CASU MCU through i2c communication.
+/*! Number of bytes (calibration data) sent to the main CASU MCU through i2c communication.
  */
-#define OUT_CAL_DATA_NUM 13
+#define OUT1_CAL_DATA_NUM 13
 
-/*! Number of bytes received from CASU MCU through i2c communication.
+/*! Number of bytes received from the main CASU MCU through i2c communication.
  */
-#define IN_DATA_NUM 59
+#define IN1_DATA_NUM 59
+
+/*! Number of bytes (reference data) sent to the aux CASU MCU through i2c communication.
+ */
+#define OUT2_REF_DATA_NUM 5
+
+/*! Number of bytes received from the aux CASU MCU through i2c communication.
+ */
+#define IN2_DATA_NUM 4
 
 /*! \brief Implements communication with CASU microcontroller (MCU), communication with a user code (CASU controller) and data logging.
  *
@@ -115,7 +123,8 @@ private:
 	boost::mutex mtxPub_; /*!< Mutex used for locking outgoing data. */
 	boost::mutex mtxSub_; /*!< Mutex used for locking incoming data. */
 
-	I2C_SlaveMCU i2cPIC; /*!< Used for i2c communication with CASU MCU. */
+    I2C_SlaveMCU i2cPIC1; /*!< Used for i2c communication with the main CASU MCU. */
+    I2C_SlaveMCU i2cPIC2; /*!< Used for i2c communication with the aux CASU MCU used for speaker control. */
 	EHM *ehm_device;	 /*!< Used for serial communication with electro-magnetic emitter control board. */
 
 	char outBuff[20]; /*!< Buffer for i2c outgoing data.  */
@@ -136,6 +145,8 @@ private:
 	int pwmMotor_s; /*!< Latest PWM value (0,100) set to vibration motor. */
     int airflow_s; /*!< Latest PWM value (0,100) set to the actuator producing airflow. */
     int fanCooler; /*!< Latest PWM value (0,100) set to the fan which cools the PCB and aluminium cooler. */
+    int vibeAmp_s; /*!< Latest vibration amplitude (in percentage). */
+    int vibeFreq_s; /*!< Latest reference value for vibration frequency (in Hertz). */
 
 	float temp_ref; /*!< Actual reference value for CASU temperature. */
     float temp_ref_rec; /*!< Setted feference value for CASU temperature received from dsPIC. */
@@ -143,6 +154,8 @@ private:
 	int ledCtl_r[3]; /*!< Actual reference values (RGB) for control LED. */
 	int ledDiag_r[3]; /*!< Actual reference values (RGB) for diagnostic LED. */
 	int pwmMotor_r; /*!< Actual reference value for vibration motor. */
+    int vibeAmp_r; /*!< Actual reference value for vibration amplitude (in percentage). */
+    int vibeFreq_r; /*!< Actual reference value for vibration frequency (in Hertz). */
     int airflow_r; /*!< Actual reference value for actuator producing airflow. */
 
     float Kp; /*!< Proportional gain of PI controller */
@@ -156,7 +169,9 @@ private:
     std::string pub_addr; /*!< Address for publising zmq messages */
     std::string sub_addr; /*!< Address for subscribing to zmq messages */
     int i2c_bus;      /*!< The number of i2c bus being used for communication with dsPIC */
-    int picAddress;  /*!< I2C address of dsPIC MCU */
+    int pic1Address;  /*!< I2C address of the main dsPIC MCU */
+    int pic2Address;  /*!< I2C address of the aux dsPIC MCU used for speaker control */
+
 
 	int proxyThresh; /*!< Proximity sensor threshold. */
     std::string casuName; /*!< Used for storing CASU name. */
