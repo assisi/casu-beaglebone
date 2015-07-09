@@ -148,6 +148,7 @@ private:
     int speakerAmp_s; /*!< Latest reference for speaker vibration intensity  (in percentage). */
     int speakerFreq_s; /*!< Latest reference value for speaker vibration frequency (in Hertz). */
     int motPwm_s; /*!< Latest reference value for vibration vibration motor pwm (0-100). */
+    int newRef; /*!< Flag indicating if new reference has been set up. */
 
 	float temp_ref; /*!< Actual reference value for CASU temperature. */
     float temp_ref_rec; /*!< Setted feference value for CASU temperature received from dsPIC. */

@@ -115,6 +115,9 @@ CASU_Interface::~CASU_Interface() {
 
 void CASU_Interface::i2cComm() {
 	int print_counter = 0 ;
+    int ref;
+    int ref_conf_main;
+    int ref_conf_aux;
 	char str_buff[256] = {0};
 	std::stringstream ss;
 	gettimeofday(&start_time, NULL);
@@ -123,6 +126,57 @@ void CASU_Interface::i2cComm() {
             proxi_f proxi_fr proxi_br proxi_b proxi_bl proxi_fl \n");
 	log_file.write(str_buff, strlen(str_buff));
 	while(1) {
+
+        for (int i = 0; i < 8; i++) {
+            this->mtxSub_.lock();
+            ref = newRef;
+            newRef = 0;
+            ref_conf_main = (pwmMotor_r != pwmMotor_s)
+                    || (ledDiag_r[0] != ledDiag_s[0] || ledDiag_r[1] != ledDiag_s[1] || ledDiag_r[2] != ledDiag_s[2])
+                    || (ledCtl_r[0] != ledCtl_s[0] || ledCtl_r[1] != ledCtl_s[1] || ledCtl_r[2] != ledCtl_s[2])
+                    || (airflow_r != airflow_s)
+                    || (abs(temp_ref - temp_ref_rec) < 0.1);
+            ref_conf_aux = (speakerAmp_r != speakerAmp_s) || (speakerFreq_r != speakerFreq_s);
+            mtxSub_.unlock();
+
+            if (ref == 1 || ref_conf_main == 1) {
+                this->mtxSub_.lock();
+                outBuff[0] = 3;
+                int tmp = temp_ref * 10;
+                if (tmp < 0) tmp = tmp + 65536;
+                //printf("Sending temperature %d \n", tmp);
+                outBuff[1] = (tmp & 0x00FF);
+                outBuff[2] = (tmp & 0xFF00) >> 8;
+
+                outBuff[3] = pwmMotor_r & 0x00FF;
+                outBuff[4] = (pwmMotor_r & 0xFF00) >> 8;
+
+                outBuff[5] = ledCtl_r[0];
+                outBuff[6] = ledCtl_r[1];
+                outBuff[7] = ledCtl_r[2];
+
+                outBuff[8] = ledDiag_r[0];
+                outBuff[9] = ledDiag_r[1];
+                outBuff[10] = ledDiag_r[2];
+
+                outBuff[11] = airflow_r;
+                this->mtxSub_.unlock();
+                status = i2cPIC1.sendData(outBuff, OUT1_REF_DATA_NUM);
+            }
+
+            if (pic2Address != 0 && (ref == 1 || ref_conf_aux == 1)) {
+                this->mtxSub_.lock();
+                outBuff[0] = 3;
+                outBuff[1] = speakerFreq_r & 0x00FF;
+                outBuff[2] = (speakerFreq_r & 0xFF00) >> 8;
+                outBuff[3] = speakerAmp_r & 0x00FF;
+                outBuff[4] = (speakerAmp_r & 0xFF00) >> 8;
+                this->mtxSub_.unlock();
+                status = i2cPIC2.sendData(outBuff, OUT2_REF_DATA_NUM);
+            }
+            usleep(10000);
+            // total 8 * 10 ms = 80 msec
+        }
 
         status = i2cPIC1.receiveData(inBuff, IN1_DATA_NUM);
 
@@ -232,7 +286,7 @@ void CASU_Interface::i2cComm() {
 			log_file.write(str_buff, strlen(str_buff));
 			log_file.flush();
 			print_counter++;
-            if (print_counter == 20) {
+            if (print_counter == 10) {
 				printf("temp = ");
 				for (int i = 0; i < 5; i++) {
 					printf("%.1f ", temp[i]);
@@ -281,31 +335,6 @@ void CASU_Interface::i2cComm() {
 			}
 		}
 
-        //usleep(10000);
-		this->mtxSub_.lock();
-        outBuff[0] = 3;
-		int tmp = temp_ref * 10;
-		if (tmp < 0) tmp = tmp + 65536;
-		//printf("Sending temperature %d \n", tmp);
-        outBuff[1] = (tmp & 0x00FF);
-        outBuff[2] = (tmp & 0xFF00) >> 8;
-
-        outBuff[3] = pwmMotor_r & 0x00FF;
-        outBuff[4] = (pwmMotor_r & 0xFF00) >> 8;
-
-        outBuff[5] = ledCtl_r[0];
-        outBuff[6] = ledCtl_r[1];
-        outBuff[7] = ledCtl_r[2];
-
-        outBuff[8] = ledDiag_r[0];
-        outBuff[9] = ledDiag_r[1];
-        outBuff[10] = ledDiag_r[2];
-
-        outBuff[11] = airflow_r;
-		this->mtxSub_.unlock();
-        status = i2cPIC1.sendData(outBuff, OUT1_REF_DATA_NUM);
-        //usleep(10000);
-
         if (pic2Address != 0 ) {
             // using the second dspic for speaker control
             status = i2cPIC2.receiveData(inBuff, IN2_DATA_NUM);
@@ -319,20 +348,9 @@ void CASU_Interface::i2cComm() {
                 speakerAmp_s = inBuff[2] | (inBuff[3] << 8);
                 this->mtxPub_.unlock();
             }
-
-            //usleep(10000);
-
-            this->mtxSub_.lock();
-            outBuff[0] = 3;
-            outBuff[1] = speakerFreq_r & 0x00FF;
-            outBuff[2] = (speakerFreq_r & 0xFF00) >> 8;
-            outBuff[3] = speakerAmp_r & 0x00FF;
-            outBuff[4] = (speakerAmp_r & 0xFF00) >> 8;
-            this->mtxSub_.unlock();
-            status = i2cPIC2.sendData(outBuff, OUT2_REF_DATA_NUM);
-            //usleep(10000);
         }
 
+        // send calibration file if not already sent
         if (calRec == 0 || calSend == 0) {
             outBuff[0] = 2;
             outBuff[1] = tempCtlOn;
@@ -357,10 +375,8 @@ void CASU_Interface::i2cComm() {
             outBuff[11] = (tmp & 0xFF00) >> 8;
             outBuff[12] = fanCtlOn;
             status = i2cPIC1.sendData(outBuff, OUT1_CAL_DATA_NUM);
-            //usleep(10000);
             calSend = 1;
         }
-        usleep(50000); // 50 ms
     }
 }
 
@@ -405,7 +421,7 @@ void CASU_Interface::zmqPub() {
 		zmq::send_multipart(zmqPub, casuName.c_str(), "IR", "Ranges", data);
 
 		temp_clock++;
-		if (temp_clock == 4) {
+        if (temp_clock == 10) {
 			this->mtxPub_.lock();
 			for(int i = 0; i < 5; i++) {
 				temps.set_temp(i, temp[i]);
@@ -448,7 +464,7 @@ void CASU_Interface::zmqPub() {
 
 			temp_clock = 0;
 		}
-		usleep(250000);
+        usleep(100000);
 
 	}
 }
@@ -473,7 +489,7 @@ void CASU_Interface::zmqSub()
 
 		if (len >= 0) {
 
-			 if (device == "DiagnosticLed") {
+            if (device == "DiagnosticLed") {
 
 				 if (command == "On")
 				{
@@ -534,7 +550,7 @@ void CASU_Interface::zmqSub()
 					mtxSub_.lock();
                     pwmMotor_r = vibe.amplitude();
                     mtxSub_.unlock();
-                    printf(" Vibe freq, pwm  %d %d\n", speakerAmp_r, speakerFreq_r);
+                    printf(" Motor pwm %d\n", pwmMotor_r);
 				}
 				else if (command == "Off") {
 					mtxSub_.lock();
@@ -557,6 +573,10 @@ void CASU_Interface::zmqSub()
                      mtxSub_.lock();
                      speakerAmp_r = vibe.amplitude();
                      speakerFreq_r = vibe.freq();
+                     if (speakerAmp_r == 0 || speakerFreq_r == 0) {
+                         speakerAmp_r = 0;
+                         speakerFreq_r = 0;
+                     }
                      mtxSub_.unlock();
                      printf(" Speaker freq, pwm  %d %d\n", speakerAmp_r, speakerFreq_r);
                  }
@@ -663,7 +683,9 @@ void CASU_Interface::zmqSub()
 			}
 
 		}
-
+        mtxSub_.lock();
+        newRef = 1;
+        mtxSub_.unlock();
 		fflush(stdout);
 	}
 }
