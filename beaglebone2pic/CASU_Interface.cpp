@@ -28,7 +28,11 @@ CASU_Interface::CASU_Interface(char *fbc_file)
     fanCtlOn = fbc["fanCtlOn"].as<int>();
 
     i2cPIC1.initI2C(i2c_bus, pic1Address);
-    i2cPIC2.initI2C(i2c_bus, pic2Address);
+
+    if (pic2Address != 0) {
+        // we are using two dspic boards, init the second
+        i2cPIC2.initI2C(i2c_bus, pic2Address);
+    }
 	zmqContext = new zmq::context_t(2);
 	ledDiag_r[L_R] = 0;
 	ledDiag_r[L_G] = 0;
@@ -66,10 +70,10 @@ CASU_Interface::CASU_Interface(char *fbc_file)
 
 	pwmMotor_r = 0;
 
-    vibeAmp_r = 0;
-    vibeAmp_s = 0;
-    vibeFreq_r = 0;
-    vibeFreq_s = 0;
+    speakerAmp_r = 0;
+    speakerAmp_s = 0;
+    speakerFreq_r = 0;
+    speakerFreq_s = 0;
 
     airflow_r = 0;
     airflow_s = 0;
@@ -180,7 +184,7 @@ void CASU_Interface::i2cComm() {
 
 			ctlPeltier_s = inBuff[40];
             if (ctlPeltier_s > 100) ctlPeltier_s = ctlPeltier_s - 201;
-			pwmMotor_s = inBuff[41];
+            motPwm_s = inBuff[41];
 
 			ledCtl_s[L_R] = inBuff[42];
 			ledCtl_s[L_G] = inBuff[43];
@@ -228,7 +232,7 @@ void CASU_Interface::i2cComm() {
 			log_file.write(str_buff, strlen(str_buff));
 			log_file.flush();
 			print_counter++;
-            if (print_counter == 10) {
+            if (print_counter == 20) {
 				printf("temp = ");
 				for (int i = 0; i < 5; i++) {
 					printf("%.1f ", temp[i]);
@@ -266,7 +270,7 @@ void CASU_Interface::i2cComm() {
 				}
 				printf("\n");
 
-                printf("peltier, vibeFreq, vibeAmp, fan, fanCooler = %d %d %d %d\n", ctlPeltier_s, vibeFreq_s, vibeAmp_s, airflow_s, fanCooler);
+                printf("peltier, motPwm, speakFreq, speakAmp, fan, fanCooler = %d %d %d %d %d\n", ctlPeltier_s, motPwm_s, speakerFreq_s, speakerAmp_s, airflow_s, fanCooler);
 
                 printf("EM electric, EM magnetic, EM heat = %d %d %d\n", ehm_freq_electric,
                        ehm_freq_magnetic,
@@ -277,7 +281,7 @@ void CASU_Interface::i2cComm() {
 			}
 		}
 
-        usleep(50000);
+        //usleep(10000);
 		this->mtxSub_.lock();
         outBuff[0] = 3;
 		int tmp = temp_ref * 10;
@@ -300,30 +304,34 @@ void CASU_Interface::i2cComm() {
         outBuff[11] = airflow_r;
 		this->mtxSub_.unlock();
         status = i2cPIC1.sendData(outBuff, OUT1_REF_DATA_NUM);
-        usleep(50000);
+        //usleep(10000);
 
-        status = i2cPIC2.receiveData(inBuff, IN2_DATA_NUM);
+        if (pic2Address != 0 ) {
+            // using the second dspic for speaker control
+            status = i2cPIC2.receiveData(inBuff, IN2_DATA_NUM);
 
-        if (status <= 0) {
-            printf("Failed to receive data from aux pic");
+            if (status <= 0) {
+                printf("Failed to receive data from aux pic");
+            }
+            else {
+                this->mtxPub_.lock();
+                speakerFreq_s = inBuff[0] | (inBuff[1] << 8);
+                speakerAmp_s = inBuff[2] | (inBuff[3] << 8);
+                this->mtxPub_.unlock();
+            }
+
+            //usleep(10000);
+
+            this->mtxSub_.lock();
+            outBuff[0] = 3;
+            outBuff[1] = speakerFreq_r & 0x00FF;
+            outBuff[2] = (speakerFreq_r & 0xFF00) >> 8;
+            outBuff[3] = speakerAmp_r & 0x00FF;
+            outBuff[4] = (speakerAmp_r & 0xFF00) >> 8;
+            this->mtxSub_.unlock();
+            status = i2cPIC2.sendData(outBuff, OUT2_REF_DATA_NUM);
+            //usleep(10000);
         }
-        else {
-            this->mtxPub_.lock();
-            vibeFreq_s = inBuff[0] | (inBuff[1] << 8);
-            vibeAmp_s = inBuff[2] | (inBuff[3] << 8);
-            this->mtxPub_.unlock();
-        }
-
-        usleep(50000);
-
-        this->mtxSub_.lock();
-        outBuff[0] = 3;
-        outBuff[1] = vibeFreq_r & 0x00FF;
-        outBuff[2] = (vibeFreq_r & 0xFF00) >> 8;
-        outBuff[3] = vibeAmp_r & 0x00FF;
-        outBuff[4] = (vibeAmp_r & 0xFF00) >> 8;
-        this->mtxSub_.unlock();
-        status = i2cPIC2.sendData(outBuff, OUT2_REF_DATA_NUM);
 
         if (calRec == 0 || calSend == 0) {
             outBuff[0] = 2;
@@ -349,10 +357,11 @@ void CASU_Interface::i2cComm() {
             outBuff[11] = (tmp & 0xFF00) >> 8;
             outBuff[12] = fanCtlOn;
             status = i2cPIC1.sendData(outBuff, OUT1_CAL_DATA_NUM);
-            usleep(50000);
+            //usleep(10000);
             calSend = 1;
         }
-	}
+        usleep(50000); // 50 ms
+    }
 }
 
 void CASU_Interface::zmqPub() {
@@ -516,29 +525,52 @@ void CASU_Interface::zmqSub()
 
 			else if (device == "VibeMotor") {
 
-				printf("Received vibe command: %s", command.data());
+                printf("Received vibe command: %s\n", command.data());
 
 				if (command == "On") {
 
 					AssisiMsg::VibrationSetpoint vibe;
 					assert(vibe.ParseFromString(data));
 					mtxSub_.lock();
-                    //pwmMotor_r = vibe.freq() * vibeMotorConst;
-                    vibeAmp_r = vibe.amplitude();
-                    vibeFreq_r = vibe.freq();
+                    pwmMotor_r = vibe.amplitude();
                     mtxSub_.unlock();
-                    printf(" Vibe freq, pwm  %d %d\n", vibeAmp_r, vibeFreq_r);
+                    printf(" Vibe freq, pwm  %d %d\n", speakerAmp_r, speakerFreq_r);
 				}
 				else if (command == "Off") {
 					mtxSub_.lock();
-                    vibeAmp_r = 0;
-                    vibeFreq_r = 0;
+                    pwmMotor_r = 0;
 					mtxSub_.unlock();
 				}
 				else {
 					cerr << "Unknown command " << command << " for " << name << "/" << device << endl;
 				}
 			}
+
+            else if (device == "Speaker") {
+
+                 printf("Received vibe command: %s\n", command.data());
+
+                 if (command == "On") {
+
+                     AssisiMsg::VibrationSetpoint vibe;
+                     assert(vibe.ParseFromString(data));
+                     mtxSub_.lock();
+                     speakerAmp_r = vibe.amplitude();
+                     speakerFreq_r = vibe.freq();
+                     mtxSub_.unlock();
+                     printf(" Speaker freq, pwm  %d %d\n", speakerAmp_r, speakerFreq_r);
+                 }
+                 else if (command == "Off") {
+                     mtxSub_.lock();
+                     speakerAmp_r = 0;
+                     speakerFreq_r = 0;
+                     mtxSub_.unlock();
+                 }
+                 else {
+                     cerr << "Unknown command " << command << " for " << name << "/" << device << endl;
+                 }
+            }
+
 			else if (device == "EM") {
 
                 printf("Received EM device message: %s\n \

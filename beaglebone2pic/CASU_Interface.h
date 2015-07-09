@@ -145,8 +145,9 @@ private:
 	int pwmMotor_s; /*!< Latest PWM value (0,100) set to vibration motor. */
     int airflow_s; /*!< Latest PWM value (0,100) set to the actuator producing airflow. */
     int fanCooler; /*!< Latest PWM value (0,100) set to the fan which cools the PCB and aluminium cooler. */
-    int vibeAmp_s; /*!< Latest vibration amplitude (in percentage). */
-    int vibeFreq_s; /*!< Latest reference value for vibration frequency (in Hertz). */
+    int speakerAmp_s; /*!< Latest reference for speaker vibration intensity  (in percentage). */
+    int speakerFreq_s; /*!< Latest reference value for speaker vibration frequency (in Hertz). */
+    int motPwm_s; /*!< Latest reference value for vibration vibration motor pwm (0-100). */
 
 	float temp_ref; /*!< Actual reference value for CASU temperature. */
     float temp_ref_rec; /*!< Setted feference value for CASU temperature received from dsPIC. */
@@ -154,8 +155,9 @@ private:
 	int ledCtl_r[3]; /*!< Actual reference values (RGB) for control LED. */
 	int ledDiag_r[3]; /*!< Actual reference values (RGB) for diagnostic LED. */
 	int pwmMotor_r; /*!< Actual reference value for vibration motor. */
-    int vibeAmp_r; /*!< Actual reference value for vibration amplitude (in percentage). */
-    int vibeFreq_r; /*!< Actual reference value for vibration frequency (in Hertz). */
+    int speakerAmp_r; /*!< Actual reference value for vibration amplitude (in percentage). */
+    int speakerFreq_r; /*!< Actual reference value for vibration frequency (in Hertz). */
+    int motPwm_r; /*!< Actual reference value for vibration motor pwm (0-100). */
     int airflow_r; /*!< Actual reference value for actuator producing airflow. */
 
     float Kp; /*!< Proportional gain of PI controller */

@@ -1,4 +1,3 @@
-
 # A Firmware Board Configuratoin (FBC) template file (yaml syntax)
 # Each firmware instance should be run with it's own FBC file
 
@@ -17,17 +16,21 @@ sub_addr : tcp://*:1556
 # The number of I2C bus on beaglebone being used for communication.
 i2c_bus : 2
 
-# Hardware address on I2C bus
-i2c_addr : 0x11
+# i2c hardware address of the main dspic, should be never 0x00
+pic1_addr : 0x11
+
+# i2c hardware address of the auxiliary dspic (used for speaker control)
+# put 0x00 if the second dspic is not connected
+pic2_addr : 0x00
 
 # Flag determines if temp control will run, 1 - on, 0 - off
 tempCtlOn : 1
 
 # Proportional gain of PI controller
-Kp : 4
+Kp : 20
 
 # Integral gain of PI controller
-Ki : 0.2
+Ki : 1.8
 
 # Weight of current casu ring in computation of discrete PT1 filter for wax tem$
 Kf1 : 0.1029
@@ -40,3 +43,4 @@ Kf3 : 0.7893
 
 # Flag determines if fan for cooling casu will runn, 1 - on, 0 - off
 fanCtlOn : 1
+
