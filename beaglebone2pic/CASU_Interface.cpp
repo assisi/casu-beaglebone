@@ -17,7 +17,7 @@ CASU_Interface::CASU_Interface(char *fbc_file)
     pub_addr = fbc["pub_addr"].as<string>();
     sub_addr = fbc["sub_addr"].as<string>();
     i2c_bus = fbc["i2c_bus"].as<int>();
-    picAddress = fbc["i2c_addr"].as<int>();
+    picAddress = fbc["pic1_addr"].as<int>();
     tempCtlOn = fbc["tempCtlOn"].as<int>();
     Kp = fbc["Kp"].as<float>();
     Ki = fbc["Ki"].as<float>();
