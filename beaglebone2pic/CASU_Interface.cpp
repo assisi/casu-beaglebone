@@ -286,7 +286,7 @@ void CASU_Interface::i2cComm() {
 			log_file.write(str_buff, strlen(str_buff));
 			log_file.flush();
 			print_counter++;
-            if (print_counter == 10) {
+            if (print_counter == 2) {
 				printf("temp = ");
 				for (int i = 0; i < 5; i++) {
 					printf("%.1f ", temp[i]);
@@ -324,7 +324,7 @@ void CASU_Interface::i2cComm() {
 				}
 				printf("\n");
 
-                printf("peltier, motPwm, speakFreq, speakAmp, fan, fanCooler = %d %d %d %d %d\n", ctlPeltier_s, motPwm_s, speakerFreq_s, speakerAmp_s, airflow_s, fanCooler);
+                printf("peltier, motPwm, speakFreq, speakAmp, fan, fanCooler = %d %d %d %d %d %d\n", ctlPeltier_s, motPwm_s, speakerFreq_s, speakerAmp_s, airflow_s, fanCooler);
 
                 printf("EM electric, EM magnetic, EM heat = %d %d %d\n", ehm_freq_electric,
                        ehm_freq_magnetic,
