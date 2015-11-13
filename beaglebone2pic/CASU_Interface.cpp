@@ -257,23 +257,16 @@ void CASU_Interface::i2cComm() {
 			//printf("I2C flashin to file time stamp %.3f \n", t_msec);
 			print_counter++;
             if (print_counter == 13) {
-				printf("temp = ");
+				printf("temp F R B L PCB TOP = ");
 				for (int i = 0; i < 6; i++) {
 					printf("%.1f ", temp[i]);
 				}
-                printf("%.1f %.1f %.1f %.1f", tempCasu, tempWax, temp_ref_rec, temp_ref_cur);
 				printf("\n");
+                printf("temp Casu Wax Ref = %.1f %.1f %.1f\n", tempCasu, tempWax, temp_ref_rec);
 
-				printf("vibeAmp = ");
-				for (int i = 0; i < 4; i++) {
-					printf("%.1f ", vAmp[i]);
-				}
+				printf("vibeAmp meas ref = %.1f %d", vAmp[0], ledCtl_s[0]);
 				printf("\n");
-
-				printf("vibeFreq = ");
-				for (int i = 0; i < 4; i++) {
-					printf("%.1f ", vFreq[i]);
-				}
+				printf("vibeFreq meas ref = %.1f %d", vFreq[0], ledCtl_s[1] + ledCtl_s[2] * 256);
 				printf("\n");
 
 				printf("ir raw = ");
@@ -392,7 +385,7 @@ void CASU_Interface::zmqPub() {
 	}
 	AssisiMsg::TemperatureArray temps;
 
-    for(int i = 0; i < 7; i++) {
+    for(int i = 0; i < 8; i++) {
 		temps.add_temp(0);
 	}
 
@@ -419,11 +412,11 @@ void CASU_Interface::zmqPub() {
 		if (temp_clock == 4) {
             // Temperature is published 4 times less often
 			this->mtxPub_.lock();
-			for(int i = 0; i < 5; i++) {
+			for(int i = 0; i < 6; i++) {
 				temps.set_temp(i, temp[i]);
 			}
-            temps.set_temp(5, tempCasu);
-            temps.set_temp(6, tempWax);
+            temps.set_temp(6, tempCasu);
+            temps.set_temp(7, tempWax);
 			this->mtxPub_.unlock();
 			temps.SerializeToString(&data);
 			zmq::send_multipart(zmqPub, casuName.c_str(), "Temp", "Temperatures", data);

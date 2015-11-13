@@ -73,8 +73,8 @@ public:
 		T_R = 1, /*!< Temperature sensor on right CASU side */
 		T_B = 2, /*!< Temperature sensor on back CASU side */
 		T_L = 3, /*!< Temperature sensor on left CASU side */
-        T_flexPCB = 4,  /*!< Temperature sensor on flex PCB */
-        T_PCB = 5 /*!< Temperature sensor on main pcb */
+        T_flexPCB = 5,  /*!< Temperature sensor on flex PCB */
+        T_PCB = 4 /*!< Temperature sensor on main pcb */
 
 	};
 
