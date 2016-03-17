@@ -510,59 +510,10 @@ void CASU_Interface::zmqSub()
 
                 printf("Received EM device message: %s\n \
                        ...Discarding message as we are now longer using electro-magnetic emitters", command.data());
-                /*
-                if (command == "config") {
-					AssisiMsg::EMDeviceConfig config;
-					assert(config.ParseFromString(data));
-					if (config.mode() == AssisiMsg::EMDeviceConfig_DeviceMode_ELECTRIC) {
-						ehm_device->initEField();
-					}
-					else if (config.mode() == AssisiMsg::EMDeviceConfig_DeviceMode_MAGNETIC) {
-						ehm_device->initMField();
-					}
-					else if (config.mode() == AssisiMsg::EMDeviceConfig_DeviceMode_HEAT) {
-						ehm_device->initHeating();
-					}
-				}
-				else if (command == "temp") {
-					AssisiMsg::Temperature temp_msg;
-					assert(temp_msg.ParseFromString(data));
-
-					// for now we use temperature as a pwm duty cycle, i.e. 36° is 36% duty
-                    // TODO: Check that the device is in the right mode!
-					ehm_temp = (int)temp_msg.temp();
-                    ehm_device->setHeaterPwm(ehm_temp);
-				}
-				else if (command == "efield") {
-
-					AssisiMsg::ElectricField efield_msg;
-					assert(efield_msg.ParseFromString(data));
-
-                    // TODO: Check that the device is in the right mode!
-                    ehm_freq_electric = (int)efield_msg.freq();
-					ehm_device->setEFieldFreq(ehm_freq_electric);
-				}
-				else if (command == "mfield") {
-
-					AssisiMsg::MagneticField mfield_msg;
-					assert(mfield_msg.ParseFromString(data));
-
-                    // TODO: Check that the device is in the right mode!
-                    ehm_freq_magnetic = (int)mfield_msg.freq();
-					ehm_device->setMFieldFreq(ehm_freq_magnetic);
-				}
-				else if (command == "Off") {
-					ehm_device->moduleOff();
-                    ehm_temp = 0;
-                    ehm_freq_electric = 0;
-                    ehm_freq_magnetic = 0;
-				}
-                */
-
 			}
 			else if (device == "Peltier") {
 				printf("Received Peltier device message: %s\n", command.data());
-				if (command == "temp") {
+				if (command == "On") {
 					AssisiMsg::Temperature temp_msg;
 					assert(temp_msg.ParseFromString(data));
 					mtxSub_.lock();
