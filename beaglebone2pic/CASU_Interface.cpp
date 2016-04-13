@@ -31,7 +31,7 @@ CASU_Interface::CASU_Interface(char *fbc_file)
     fanCtlOn = fbc["fanCtlOn"].as<int>();
 
     mux.initI2C(2, 112);
-    
+    mux.writeByte(0, 0xFF);
     
     i2cPIC.initI2C(i2c_bus, picAddress);
 	zmqContext = new zmq::context_t(3);
@@ -115,8 +115,8 @@ CASU_Interface::~CASU_Interface() {
 }
 
 void CASU_Interface::i2cComm() {
-        boost::interprocess::named_mutex i2cMuxLock(boost::interprocess::open_or_create, "i2cMuxLock" );
-        i2cMuxLock.unlock();
+        //boost::interprocess::named_mutex i2cMuxLock(boost::interprocess::open_or_create, "i2cMuxLock" );
+        //i2cMuxLock.unlock();
 	int print_counter = 0 ;
 	char str_buff[256] = {0};
 	std::stringstream ss;
@@ -126,10 +126,10 @@ void CASU_Interface::i2cComm() {
             proxi_f proxi_fr proxi_br proxi_b proxi_bl proxi_fl \n");
 	log_file.write(str_buff, strlen(str_buff));
 	while(1) {
-                i2cMuxLock.lock();
-                mux.writeByte(0, 1);
+                //i2cMuxLock.lock();
+                //mux.writeByte(0, 1);
 		status = i2cPIC.receiveData(inBuff, IN_DATA_NUM);
-		i2cMuxLock.unlock();
+		//i2cMuxLock.unlock();
 
 		if (status <= 0) {
 			cerr << "I2C initialization unsuccessful, exiting thread" << std::endl;
@@ -317,10 +317,10 @@ void CASU_Interface::i2cComm() {
 
         outBuff[11] = airflow_r;
 		this->mtxSub_.unlock();
-	i2cMuxLock.lock();
-        mux.writeByte(0, 1);
+	//i2cMuxLock.lock();
+        //mux.writeByte(0, 1);
         status = i2cPIC.sendData(outBuff, OUT_REF_DATA_NUM);
-        i2cMuxLock.unlock();
+        //i2cMuxLock.unlock();
         usleep(50000);
 
         if (calRec == 0 || calSend == 0) {
@@ -346,10 +346,10 @@ void CASU_Interface::i2cComm() {
             outBuff[10] = (tmp & 0x00FF);
             outBuff[11] = (tmp & 0xFF00) >> 8;
             outBuff[12] = fanCtlOn;
-	    i2cMuxLock.lock();
-            mux.writeByte(0, 1);
+	    //i2cMuxLock.lock();
+            //mux.writeByte(0, 1);
             status = i2cPIC.sendData(outBuff, OUT_CAL_DATA_NUM);
-	    i2cMuxLock.unlock();
+	    //i2cMuxLock.unlock();
             usleep(50000);
             calSend = 1;
         }
