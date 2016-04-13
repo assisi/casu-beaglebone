@@ -453,7 +453,7 @@ void CASU_Interface::zmqPub() {
         this->mtxPub_.lock();
         vib_ref.set_freq(vibeFreq_r);
         vib_ref.set_amplitude(vibeAmp_r);
-        if (vibeAmp_s == 0)
+        if (vibeAmp_r == 0)
         {
             act_state = "Off";
         }
