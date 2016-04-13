@@ -51,7 +51,6 @@ public:
 	 */
 	void initI2C(int i2cBus, int i2cAddress);
 
-protected:
 
 	/*! \brief Method writes byte to the given register of an i2c device.
 	 *

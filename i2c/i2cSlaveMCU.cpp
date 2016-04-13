@@ -17,7 +17,8 @@ I2C_SlaveMCU::~I2C_SlaveMCU() {
 }
 
 int I2C_SlaveMCU::sendData(char *buff, int bytesNum) {
-
+	
+	writeByte(i2cBusSaved, muxAddressSaved);
 	int status = -1;
 	int count = 0;
 	while (status < 0) {

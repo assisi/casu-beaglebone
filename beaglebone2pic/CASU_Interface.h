@@ -10,6 +10,8 @@
 #include <iostream>
 #include "i2cSlaveMCU.h"
 #include <boost/thread/mutex.hpp>
+#include <boost/interprocess/sync/named_mutex.hpp>
+#include <boost/interprocess/sync/scoped_lock.hpp>
 #include <zmq.hpp>
 #include "dev_msgs.pb.h"
 #include "zmq_helpers.hpp"
@@ -29,7 +31,7 @@
 
 /*! Number of bytes received from CASU MCU through i2c communication.
  */
-#define IN_DATA_NUM 59
+#define IN_DATA_NUM 61
 
 /*! \brief Implements communication with CASU microcontroller (MCU), communication with a user code (CASU controller) and data logging.
  *
@@ -71,7 +73,8 @@ public:
 		T_R = 1, /*!< Temperature sensor on right CASU side */
 		T_B = 2, /*!< Temperature sensor on back CASU side */
 		T_L = 3, /*!< Temperature sensor on left CASU side */
-		T_T = 4 /*!< Temperature sensor on top CASU side */
+		T_T = 4, /*!< Temperature sensor on top CASU side */
+        T_flexPCB = 5  /*!< Temperature sensor on flex PCB */
 	};
 
 	/*! \brief Used for enumerating CASU accelerometer sensors.
@@ -114,17 +117,18 @@ private:
 	zmq::context_t *zmqContext; /*!< ZMQ context variable.  */
 	boost::mutex mtxPub_; /*!< Mutex used for locking outgoing data. */
 	boost::mutex mtxSub_; /*!< Mutex used for locking incoming data. */
-
+        I2C_Device mux;
 	I2C_SlaveMCU i2cPIC; /*!< Used for i2c communication with CASU MCU. */
-	EHM *ehm_device;	 /*!< Used for serial communication with electro-magnetic emitter control board. */
+	
+EHM *ehm_device;	 /*!< Used for serial communication with electro-magnetic emitter control board. */
 
 	char outBuff[20]; /*!< Buffer for i2c outgoing data.  */
-	char inBuff[60]; /*!< Buffer for i2c incoming data. */
+        char inBuff[61]; /*!< Buffer for i2c incoming data. */
 	unsigned int dummy; /*!< Variable used for storing temporarily byte of incoming data.*/
 	char status; /*!< Status variable. */
     int calRec; /*!< Status variable for receive notification of calibration data. 1 - data received, 0 - data not yet received */
     int calSend; /*!< Status variable for sending calibration data. 1 - data sent, 0 - data not yet sent */
-	float temp[5]; /*!< Array containing latest temperature values from five sensors. */
+	float temp[6]; /*!< Array containing latest temperature values from five sensors. */
     float tempWax; /*!< Estimated wax temperature. */
     float tempCasu; /*!< Estimated casu ring temperature. */
 	float vAmp[4]; /*!< Array containing latest vibration amplitude values from four sensors. */
@@ -143,6 +147,9 @@ private:
 	int ledCtl_r[3]; /*!< Actual reference values (RGB) for control LED. */
 	int ledDiag_r[3]; /*!< Actual reference values (RGB) for diagnostic LED. */
 	int pwmMotor_r; /*!< Actual reference value for vibration motor. */
+	int vibeAmp_r;
+	int vibeFreq_r;
+
     int airflow_r; /*!< Actual reference value for actuator producing airflow. */
 
     float Kp; /*!< Proportional gain of PI controller */
@@ -155,6 +162,8 @@ private:
 
     std::string pub_addr; /*!< Address for publising zmq messages */
     std::string sub_addr; /*!< Address for subscribing to zmq messages */
+    std::string pub_addr_af;
+    
     int i2c_bus;      /*!< The number of i2c bus being used for communication with dsPIC */
     int picAddress;  /*!< I2C address of dsPIC MCU */
 
