@@ -451,8 +451,8 @@ void CASU_Interface::zmqPub() {
         /* Speaker actuator setpoint */
         VibrationSetpoint vib_ref;
         this->mtxPub_.lock();
-        vib_ref.set_freq(vibeFreq_s);
-        vib_ref.set_amplitude(vibeAmp_s);
+        vib_ref.set_freq(vibeFreq_r);
+        vib_ref.set_amplitude(vibeAmp_r);
         if (vibeAmp_s == 0)
         {
             act_state = "Off";
@@ -466,7 +466,7 @@ void CASU_Interface::zmqPub() {
         zmq::send_multipart(zmqPub, casuName.c_str(), "Speaker", act_state.c_str(), data);
 
         /* Airflow actuator setpoint */
-        Airfflow air_ref;
+        Airflow air_ref;
         this->mtxPub_.lock();
         air_ref.set_intensity(1);
         if (airflow_r)
@@ -497,10 +497,9 @@ void CASU_Interface::zmqPub() {
         }
         this->mtxPub_.unlock();
         color_ref.SerializeToString(&data);
-        zmq::send_multipart(socket, ca.first, "DiagnosticLed", act_state.c_str(), data);
+        zmq::send_multipart(zmqPub, casuName.c_str(), "DiagnosticLed", act_state.c_str(), data);
 
 		usleep(250000);
-
 	}
 }
 
