@@ -1,4 +1,0 @@
-# Hashes of file build rules.
-b378282529332b3e54034ec24f2ad6c9 beaglebone2pic/base_msgs.pb.cc
-e026b66623dd96788838b02a904d5b95 beaglebone2pic/dev_msgs.pb.cc
-b2e5be55bb1ca86d3d52d40926fb0d00 beaglebone2pic/sim_msgs.pb.cc

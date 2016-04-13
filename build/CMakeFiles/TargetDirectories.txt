@@ -1,1 +1,0 @@
-/home/assisi/assisi-casu-beaglebone/build/beaglebone2pic/CMakeFiles/casu-fw.dir
