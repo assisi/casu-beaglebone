@@ -8,6 +8,7 @@
 #include "CASU_Interface.h"
 
 using namespace std;
+using namespace AssisiMsg;
 
 CASU_Interface::CASU_Interface(char *fbc_file)
 	{
@@ -375,12 +376,10 @@ void CASU_Interface::zmqPub() {
 		temps.add_temp(0);
 	}
 
-    AssisiMsg::Temperature peltier;
-    std::string peltMsg;
-
+    /* Data publishing loop */
 	while (1) {
 
-
+        /* Proximity sensor values */
 		this->mtxPub_.lock();
 		for(int i = 0; i < 7; i++) {
 			if (irRawVals[i] > proxyThresh)
@@ -395,8 +394,10 @@ void CASU_Interface::zmqPub() {
 		ranges.SerializeToString(&data);
 		zmq::send_multipart(zmqPub, casuName.c_str(), "IR", "Ranges", data);
 
+        /* Temperature and vibration measurements */
 		temp_clock++;
 		if (temp_clock == 4) {
+            // Temperature is published 4 times less often
 			this->mtxPub_.lock();
 			for(int i = 0; i < 5; i++) {
 				temps.set_temp(i, temp[i]);
@@ -406,20 +407,9 @@ void CASU_Interface::zmqPub() {
 			this->mtxPub_.unlock();
 			temps.SerializeToString(&data);
 			zmq::send_multipart(zmqPub, casuName.c_str(), "Temp", "Temperatures", data);
-			//printf("Sending temp data %.1f %.1f %.1f %.1f %.1f \n", temps.temp(0), temps.temp(1), temps.temp(2), temps.temp(3), temps.temp(4));
 
-            this->mtxPub_.lock();
-            peltier.set_temp(this->temp_ref_rec);
-            if (this->temp_ref_rec < 26) {
-                peltMsg = "Off";
-            }
-            else {
-                peltMsg = "On";
-            }
-            this->mtxPub_.unlock();
-            peltier.SerializeToString(&data);
-            zmq::send_multipart(zmqPub, casuName.c_str(), "Peltier", peltMsg.c_str(), data);
-
+            /* Vibration measurements */
+            // Why is vibration inside the temperature loop?
 			AssisiMsg::VibrationReadingArray vibes;
 			AssisiMsg::VibrationReading *vibe;
 
@@ -431,14 +421,84 @@ void CASU_Interface::zmqPub() {
 			}
 
 			this->mtxPub_.unlock();
-			//printf("Sending acc data %.1f %.1f %.1f %.1f \n", vibes.amplitude(0),vibes.amplitude(1), vibes.amplitude(2), vibes.amplitude(3));
-			//printf("Sending proxy data %.1f %.1f %.1f %.1f %.1f %.1f %.1f \n", ranges.rif (abs(temp[3] - temp_old) > 5)) {
+
 
 			vibes.SerializeToString(&data);
 			zmq::send_multipart(zmqPub, casuName.c_str(), "Acc", "Measurements", data);
 
 			temp_clock = 0;
 		}
+
+        std::string act_state("On");
+        
+        /* Peltier actuator setpoint */
+        Temperature temp_ref;
+        this->mtxPub_.lock();
+        temp_ref.set_temp(this->temp_ref_rec);
+        //temp_ref.set_temp(ctlPeltier_s);
+        if (this->temp_ref_rec < 26) // What is the meaning of 26?
+        { 
+            act_state = "Off";
+        }
+        else
+        {
+            act_state = "On";
+        }
+        this->mtxPub_.unlock();
+        temp_ref.SerializeToString(&data);
+        zmq::send_multipart(zmqPub, casuName.c_str(), "Peltier", act_state.c_str(), data);
+        
+        /* Speaker actuator setpoint */
+        VibrationSetpoint vib_ref;
+        this->mtxPub_.lock();
+        vib_ref.set_freq(vibeFreq_s);
+        vib_ref.set_amplitude(vibeAmp_s);
+        if (vibeAmp_s == 0)
+        {
+            act_state = "Off";
+        }
+        else
+        {
+            act_state = "On";
+        }
+        this->mtxPub_.unlock();
+        vib_ref.SerializeToString(&data);
+        zmq::send_multipart(zmqPub, casuName.c_str(), "Speaker", act_state.c_str(), data);
+
+        /* Airflow actuator setpoint */
+        Airfflow air_ref;
+        this->mtxPub_.lock();
+        air_ref.set_intensity(1);
+        if (airflow_r)
+        {
+            act_state = "On";
+        }
+        else
+        {
+            act_state = "Off";
+        }
+        this->mtxPub_.unlock();
+        air_ref.SerializeToString(&data);
+        zmq::send_multipart(zmqPub, casuName.c_str(), "Airflow", act_state.c_str(), data);
+
+        /* Diagnostic LED setpoint */
+        ColorStamped color_ref;
+        this->mtxPub_.lock();        
+        color_ref.mutable_color()->set_red(ledDiag_r[L_R]/100.0);
+        color_ref.mutable_color()->set_green(ledDiag_r[L_G]/100.0);
+        color_ref.mutable_color()->set_blue(ledDiag_r[L_B]/100.0);
+        if (ledDiag_r[L_R] || ledDiag_r[L_G] || ledDiag_r[L_B])            
+        {
+            act_state = "On";
+        }
+        else
+        {
+            act_state = "Off";
+        }
+        this->mtxPub_.unlock();
+        color_ref.SerializeToString(&data);
+        zmq::send_multipart(socket, ca.first, "DiagnosticLed", act_state.c_str(), data);
+
 		usleep(250000);
 
 	}
