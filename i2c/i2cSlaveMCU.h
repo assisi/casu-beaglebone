@@ -45,6 +45,11 @@ public:
 	 */
 	int receiveData(char *buff, int bytesNum);
 	virtual ~I2C_SlaveMCU();
+
+	private:
+		char i2cBusSaved;
+		char muxAddressSaved;
+		
 };
 
 #endif /* I2CSLAVEMCU_H */

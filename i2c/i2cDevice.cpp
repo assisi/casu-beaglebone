@@ -28,6 +28,7 @@ void I2C_Device::initI2C(int i2cBus, int devAddress) {
  * First the address of the device is sent, second the device's internal register address is sent and finally data byte(s) is read or written
  */
 
+
 int I2C_Device::writeByte(char regAddress, char data) {
 
 		// open the i2c address
@@ -129,7 +130,7 @@ int I2C_Device::readBytes(char regAddress, char *buff, int bytesNum) {
 	}
 
 	if (read(file, buff, bytesNum) != bytesNum) {
-		cerr << "Failure to read value from I2C Device address." << endl;
+		cerr << "Failure to read value from I2C Device address1." << endl;
 		close(file);
 		return -3;
 	}
@@ -190,7 +191,7 @@ int I2C_Device::readBuff(char *buff, int bytesNum) {
 	}
 
 	if (read(file, buff, bytesNum) != bytesNum) {
-		cerr << "Failure to read value from I2C Device address." << endl;
+		cerr << "Failure to read value from I2C Device address2." << endl;
 		close(file);
 		return -3;
 	}
