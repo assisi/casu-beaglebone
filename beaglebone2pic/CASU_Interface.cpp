@@ -72,14 +72,14 @@ CASU_Interface::CASU_Interface(char *fbc_file)
 
 	pwmMotor_r = 0;
 	vibeAmp_r = 0;
-	vibeFreq_r = 0;
+	vibeFreq_r = 100;
 
     airflow_r = 0;
     airflow_s = 0;
 
     fanCooler = 0;
 
-    temp_ref = 25.0;
+    temp_ref = 0.0;
     temp_ref_rec = 0.0;
     temp_ref_cur = 0.0;
 
@@ -121,15 +121,22 @@ void CASU_Interface::i2cComm() {
 	char str_buff[256] = {0};
 	std::stringstream ss;
 	gettimeofday(&start_time, NULL);
+	double t_msec;
 	timeval current_time;
     sprintf(str_buff, "time temp_f temp_r temp_b temp_l temp_pcb temp_casu temp_wax temp_ref pelt mot fanAir fanCool \
             proxi_f proxi_fr proxi_br proxi_b proxi_bl proxi_fl \n");
 	log_file.write(str_buff, strlen(str_buff));
+	log_file.flush();
+
 	while(1) {
                 //i2cMuxLock.lock();
                 //mux.writeByte(0, 1);
+		//gettimeofday(&start_time, NULL);
 		status = i2cPIC.receiveData(inBuff, IN_DATA_NUM);
 		//i2cMuxLock.unlock();
+		//gettimeofday(&current_time, NULL);
+		//t_msec = (current_time.tv_sec - start_time.tv_sec) * 1000 + (current_time.tv_usec - start_time.tv_usec)/1000;
+		//printf("I2C receive communication time stamp %.3f \n", t_msec);
 
 		if (status <= 0) {
 			cerr << "I2C initialization unsuccessful, exiting thread" << std::endl;
@@ -166,9 +173,9 @@ void CASU_Interface::i2cComm() {
 
 			dummy = inBuff[8] | (inBuff[9] << 8);
 			if (dummy > 32767)
-				temp[T_T] = (dummy - 65536.0) / 10.0;
+				temp[T_PCB] = (dummy - 65536.0) / 10.0;
 			else
-				temp[T_T] = dummy / 10.0;
+				temp[T_PCB] = dummy / 10.0;
 
 			vAmp[A_F] = (inBuff[10] | (inBuff[11] << 8)) / 10.0;
 			vAmp[A_R] = (inBuff[12] | (inBuff[13] << 8)) / 10.0;
@@ -226,28 +233,30 @@ void CASU_Interface::i2cComm() {
             else
                 temp_ref_cur = dummy / 10.0;
 
+            calRec = inBuff[58];
+
 			dummy = inBuff[59] | (inBuff[60] << 8);
 			if (dummy > 32767)
 				temp[T_flexPCB] = (dummy - 65536.0) / 10.0;
 			else
-				temp[T_flexPCB] = dummy / 10.0;
-
-            
-            
-            
+				temp[T_flexPCB] = dummy / 10.0;       
             
 
 			this->mtxPub_.unlock();
 			gettimeofday(&current_time, NULL);
-			double t_msec = (current_time.tv_sec - start_time.tv_sec) * 1000 + (current_time.tv_usec - start_time.tv_usec)/1000;
-            sprintf(str_buff, "%.2f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %d %d %d %d %d %d %d %d %d %d \n",
-                    t_msec / 1000, temp[T_F], temp[T_R], temp[T_B], temp[T_L], temp[T_T], tempCasu, tempWax, temp_ref_rec, temp_ref_cur,
+			t_msec = (current_time.tv_sec - start_time.tv_sec) * 1000 + (current_time.tv_usec - start_time.tv_usec)/1000;
+			//printf("I2C data processing time stamp %.3f \n", t_msec);
+            sprintf(str_buff, "%.2f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %d %d %d %d %d %d %d %d %d %d \n",
+                    t_msec / 1000, temp[T_F], temp[T_R], temp[T_B], temp[T_L], temp[T_PCB], temp[T_flexPCB], tempCasu, tempWax, temp_ref_rec, temp_ref_cur,
                     ctlPeltier_s, pwmMotor_s, airflow_s, fanCooler,
                     irRawVals[IR_F], irRawVals[IR_FR], irRawVals[IR_BR], irRawVals[IR_B], irRawVals[IR_BL], irRawVals[IR_FL]);
 			log_file.write(str_buff, strlen(str_buff));
 			log_file.flush();
+			//gettimeofday(&current_time, NULL);
+			//t_msec = (current_time.tv_sec - start_time.tv_sec) * 1000 + (current_time.tv_usec - start_time.tv_usec)/1000;
+			//printf("I2C flashin to file time stamp %.3f \n", t_msec);
 			print_counter++;
-            if (print_counter == 10) {
+            if (print_counter == 13) {
 				printf("temp = ");
 				for (int i = 0; i < 6; i++) {
 					printf("%.1f ", temp[i]);
@@ -295,7 +304,10 @@ void CASU_Interface::i2cComm() {
 				print_counter = 0;
 			}
 		}
-        usleep(50000);
+        usleep(30000);
+        //gettimeofday(&current_time, NULL);
+        //t_msec = (current_time.tv_sec - start_time.tv_sec) * 1000 + (current_time.tv_usec - start_time.tv_usec)/1000;
+		//printf("I2C before sending data time stamp %.3f \n", t_msec);
 		this->mtxSub_.lock();
         outBuff[0] = 3;
 		int tmp = temp_ref * 10;
@@ -320,9 +332,13 @@ void CASU_Interface::i2cComm() {
 	//i2cMuxLock.lock();
         //mux.writeByte(0, 1);
         status = i2cPIC.sendData(outBuff, OUT_REF_DATA_NUM);
-        //i2cMuxLock.unlock();
-        usleep(50000);
 
+        //gettimeofday(&current_time, NULL);
+        //t_msec = (current_time.tv_sec - start_time.tv_sec) * 1000 + (current_time.tv_usec - start_time.tv_usec)/1000;
+		//printf("I2C after sending data time stamp %.3f \n", t_msec);
+        //i2cMuxLock.unlock();
+        usleep(38000);
+		
         if (calRec == 0 || calSend == 0) {
             outBuff[0] = 2;
             outBuff[1] = tempCtlOn;
@@ -350,9 +366,13 @@ void CASU_Interface::i2cComm() {
             //mux.writeByte(0, 1);
             status = i2cPIC.sendData(outBuff, OUT_CAL_DATA_NUM);
 	    //i2cMuxLock.unlock();
-            usleep(50000);
+            usleep(20000);
             calSend = 1;
         }
+		
+        //gettimeofday(&current_time, NULL);
+        //t_msec = (current_time.tv_sec - start_time.tv_sec) * 1000 + (current_time.tv_usec - start_time.tv_usec)/1000;
+		//printf("I2C finishing loop time stamp %.3f \n", t_msec);
 	}
 }
 
@@ -622,6 +642,7 @@ void CASU_Interface::zmqSub()
 					temp_ref = 0;
 					mtxSub_.unlock();
 				}
+				else printf("Received unknown temperature command");
 			}
             else if (device == "Airflow") {
                 printf("Received Airflow message: %s\n", command.data());
