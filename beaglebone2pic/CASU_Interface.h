@@ -33,6 +33,7 @@
  */
 #define IN_DATA_NUM 61
 
+
 /*! \brief Implements communication with CASU microcontroller (MCU), communication with a user code (CASU controller) and data logging.
  *
  * Class serves as an interface between CASU MCU and a user code and it should be run on a single-board computer (SBC) such as Beaglebone, RaspberyPI, Odroid etc.
@@ -64,7 +65,7 @@ public:
 		IR_BL = 4, /*!< IR sensor on back-left CASU side */
 		IR_FL = 5, /*!< IR sensor on forward-left CASU side */
 		IR_T = 6   /*!< IR sensor on top CASU side */
-	};
+	};	
 
 	/*! \brief Used for enumerating CASU temperature sensors.
 	 */
@@ -95,6 +96,17 @@ public:
 		L_B = 2  /*!< Blue LED component */
 	};
 
+	/*! \brief Out messages id.
+	 */
+	enum MSG_OUT_ID {
+		MSG_RESET_ID = 1, /*!< Reset msg id */
+		MSG_CAL_ID = 2,   /*!< Msg cal id */
+		MSG_REF_VIBE_ID = 3, /*!< Vibration red id */
+		MSG_REF_LED_ID = 4,  /*!< LED ref id */
+		MSG_REF_TEMP_ID = 5  /*!< Temp ref id */
+	};
+
+
 	/*! Thread safe method that implements i2c communication with CASU MCU slave.
 	*/
 	void i2cComm();
@@ -118,13 +130,14 @@ private:
 	zmq::context_t *zmqContext; /*!< ZMQ context variable.  */
 	boost::mutex mtxPub_; /*!< Mutex used for locking outgoing data. */
 	boost::mutex mtxSub_; /*!< Mutex used for locking incoming data. */
-        I2C_Device mux;
+	boost::mutex mtxi2c_; /*!< Mutex used for locking i2c bus. */
+    I2C_Device mux;
 	I2C_SlaveMCU i2cPIC; /*!< Used for i2c communication with CASU MCU. */
 	
 EHM *ehm_device;	 /*!< Used for serial communication with electro-magnetic emitter control board. */
 
 	char outBuff[20]; /*!< Buffer for i2c outgoing data.  */
-        char inBuff[61]; /*!< Buffer for i2c incoming data. */
+    char inBuff[61]; /*!< Buffer for i2c incoming data. */
 	unsigned int dummy; /*!< Variable used for storing temporarily byte of incoming data.*/
 	char status; /*!< Status variable. */
     int calRec; /*!< Status variable for receive notification of calibration data. 1 - data received, 0 - data not yet received */
@@ -141,15 +154,19 @@ EHM *ehm_device;	 /*!< Used for serial communication with electro-magnetic emitt
 	int pwmMotor_s; /*!< Latest PWM value (0,100) set to vibration motor. */
     int airflow_s; /*!< Latest PWM value (0,100) set to the actuator producing airflow. */
     int fanCooler; /*!< Latest PWM value (0,100) set to the fan which cools the PCB and aluminium cooler. */
+	int vibeAmp_s; /*!< Latest reference value for speaker amplitude. */
+	int vibeFreq_s; /*!< Latest reference value for speaker frequency. */
+
 
 	float temp_ref; /*!< Actual reference value for CASU temperature. */
     float temp_ref_rec; /*!< Setted feference value for CASU temperature received from dsPIC. */
     float temp_ref_cur; /*!< Actual reference value for CASU temperature received from dsPIC. */
 	int ledCtl_r[3]; /*!< Actual reference values (RGB) for control LED. */
-	int ledDiag_r[3]; /*!< Actual reference values (RGB) for diagnostic LED. */
-	int pwmMotor_r; /*!< Actual reference value for vibration motor. */
-	int vibeAmp_r;
-	int vibeFreq_r;
+	int ledDiag_r[3];  /*!< Actual reference values (RGB) for diagnostic LED. */
+	int vibeAmp_r; /*!< Actual reference value for speaker amplitude. */
+	int vibeFreq_r; /*!< Actual reference value for speaker frequency. */
+	
+	int pwmMotor_r; /*!< Actual reference value for speaker amplitude. */
 
     int airflow_r; /*!< Actual reference value for actuator producing airflow. */
 

@@ -74,6 +74,9 @@ CASU_Interface::CASU_Interface(char *fbc_file)
 	vibeAmp_r = 0;
 	vibeFreq_r = 100;
 
+	vibeAmp_s = 0;
+	vibeFreq_s = 100;
+
     airflow_r = 0;
     airflow_s = 0;
 
@@ -132,7 +135,9 @@ void CASU_Interface::i2cComm() {
                 //i2cMuxLock.lock();
                 //mux.writeByte(0, 1);
 		//gettimeofday(&start_time, NULL);
+		this->mtxi2c_.lock();
 		status = i2cPIC.receiveData(inBuff, IN_DATA_NUM);
+		this->mtxi2c_.unlock();
 		//i2cMuxLock.unlock();
 		//gettimeofday(&current_time, NULL);
 		//t_msec = (current_time.tv_sec - start_time.tv_sec) * 1000 + (current_time.tv_usec - start_time.tv_usec)/1000;
@@ -298,40 +303,7 @@ void CASU_Interface::i2cComm() {
 			}
 		}
         usleep(30000);
-        //gettimeofday(&current_time, NULL);
-        //t_msec = (current_time.tv_sec - start_time.tv_sec) * 1000 + (current_time.tv_usec - start_time.tv_usec)/1000;
-		//printf("I2C before sending data time stamp %.3f \n", t_msec);
-		this->mtxSub_.lock();
-        outBuff[0] = 3;
-		int tmp = temp_ref * 10;
-		if (tmp < 0) tmp = tmp + 65536;
-		//printf("Sending temperature %d \n", tmp);
-        outBuff[1] = (tmp & 0x00FF);
-        outBuff[2] = (tmp & 0xFF00) >> 8;
-
-        outBuff[3] = pwmMotor_r & 0x00FF;
-        outBuff[4] = (pwmMotor_r & 0xFF00) >> 8;
-
-        outBuff[5] = vibeAmp_r;
-        outBuff[6] = vibeFreq_r>>8;
-        outBuff[7] = vibeFreq_r;
-
-        outBuff[8] = ledDiag_r[0];
-        outBuff[9] = ledDiag_r[1];
-        outBuff[10] = ledDiag_r[2];
-
-        outBuff[11] = airflow_r;
-		this->mtxSub_.unlock();
-	//i2cMuxLock.lock();
-        //mux.writeByte(0, 1);
-        status = i2cPIC.sendData(outBuff, OUT_REF_DATA_NUM);
-
-        //gettimeofday(&current_time, NULL);
-        //t_msec = (current_time.tv_sec - start_time.tv_sec) * 1000 + (current_time.tv_usec - start_time.tv_usec)/1000;
-		//printf("I2C after sending data time stamp %.3f \n", t_msec);
-        //i2cMuxLock.unlock();
-        usleep(38000);
-		
+        
         if (calRec == 0 || calSend == 0) {
             outBuff[0] = 2;
             outBuff[1] = tempCtlOn;
@@ -355,10 +327,11 @@ void CASU_Interface::i2cComm() {
             outBuff[10] = (tmp & 0x00FF);
             outBuff[11] = (tmp & 0xFF00) >> 8;
             outBuff[12] = fanCtlOn;
-	    //i2cMuxLock.lock();
-            //mux.writeByte(0, 1);
+        	
+        	this->mtxi2c_.lock();
             status = i2cPIC.sendData(outBuff, OUT_CAL_DATA_NUM);
-	    //i2cMuxLock.unlock();
+            this->mtxi2c_.unlock();
+            
             usleep(20000);
             calSend = 1;
         }
@@ -534,6 +507,7 @@ void CASU_Interface::zmqSub()
 	string command;
 	string data;
 	int len;
+	char out_i2c_buff[20]; /*!< Buffer for i2c outgoing data.  */
 	cout << "Starting sub server: " << casuName << endl;
 
 	while (1) {
@@ -565,30 +539,23 @@ void CASU_Interface::zmqSub()
 				{
 					cerr << "Unknown command for " << name << "/" << device << endl;
 				}
+
+				if ((ledDiag_s[0] != ledDiag_r[0]) || (ledDiag_s[1] != ledDiag_r[1]) || (ledDiag_s[2] != ledDiag_r[2])) {
+					out_i2c_buff[0] = MSG_REF_LED_ID;
+					out_i2c_buff[1] =  ledDiag_r[0];
+					out_i2c_buff[2] =  ledDiag_r[1];
+					out_i2c_buff[3] =  ledDiag_r[2];
+					this->mtxi2c_.lock();
+					status = i2cPIC.sendData(out_i2c_buff, 4);
+					this->mtxi2c_.unlock();
+				}
 			}
 
 			else if (device == "Light") {
 
-				if (command == "On") {
-					AssisiMsg::ColorStamped color_msg;
-					assert(color_msg.ParseFromString(data));
+				printf("Received Light device message: %s\n \
+                       ...Discarding message as we are now longer using light as an actuator", command.data());
 
-					mtxSub_.lock();
-					ledCtl_r[L_R] = 100 * color_msg.color().red();
-					ledCtl_r[L_G] = 100 * color_msg.color().green();
-					ledCtl_r[L_B] = 100 * color_msg.color().blue();
-					mtxSub_.unlock();
-				}
-				else if (command == "Off") {
-					mtxSub_.lock();
-					ledCtl_r[L_R] = 0;
-					ledCtl_r[L_G] = 0;
-					ledCtl_r[L_B] = 0;
-					mtxSub_.unlock();
-				 }
-				else {
-					cerr << "Unknown command " << command << " for " << name << "/" << device << endl;
-				}
 			}
 
 			else if (device == "Speaker") {
@@ -600,20 +567,42 @@ void CASU_Interface::zmqSub()
 					AssisiMsg::VibrationSetpoint vibe;
 					assert(vibe.ParseFromString(data));
 					mtxSub_.lock();
-                    //pwmMotor_r = vibe.freq() * vibeMotorConst;
                     vibeAmp_r = vibe.amplitude();
-		    vibeFreq_r = vibe.freq();
+                    if (vibeAmp_r > 100)
+                    	vibeAmp_r = 100;
+                    else if (vibeAmp_r < 0)
+                    	vibeAmp_r = 0;
+
+		    		vibeFreq_r = vibe.freq();
+		    		if (vibeFreq_r > 500)
+		    			vibeFreq_r = 500;
+		    		else if (vibeFreq_r < 1)
+		    			vibeFreq_r = 1;
                     mtxSub_.unlock();
-                    printf(" Vibe pwm  %d \n", pwmMotor_r);
+                    printf(" Vibe amp freq %d %d \n", vibeAmp_r, vibeFreq_r);
+
 				}
 				else if (command == "Off") {
 					mtxSub_.lock();
 					vibeAmp_r = 0;
 					mtxSub_.unlock();
+					printf(" Vibe amp freq %d %d \n", vibeAmp_r, vibeFreq_r);
+
 				}
 				else {
 					cerr << "Unknown command " << command << " for " << name << "/" << device << endl;
 				}
+
+				if (vibeAmp_r != vibeAmp_s || vibeFreq_r != vibeFreq_s) {
+					out_i2c_buff[0] = MSG_REF_VIBE_ID;
+					out_i2c_buff[1] =  vibeAmp_r;
+					out_i2c_buff[2] = vibeFreq_r & 0x00FF;
+        			out_i2c_buff[3] = (vibeFreq_r & 0xFF00) >> 8;
+        			this->mtxi2c_.lock();
+					status = i2cPIC.sendData(out_i2c_buff, 4);
+					this->mtxi2c_.unlock();
+				}
+
 			}
 			else if (device == "EM") {
 
@@ -627,6 +616,8 @@ void CASU_Interface::zmqSub()
 					assert(temp_msg.ParseFromString(data));
 					mtxSub_.lock();
 					temp_ref = temp_msg.temp();
+					if (temp_ref < 26)
+						temp_ref = 0;
 					mtxSub_.unlock();
 					printf("Reference temperature %.1f \n", temp_ref);
 				}
@@ -636,6 +627,17 @@ void CASU_Interface::zmqSub()
 					mtxSub_.unlock();
 				}
 				else printf("Received unknown temperature command");
+
+				if (abs(temp_ref - temp_ref_rec) > 0.1) {
+					out_i2c_buff[0] = MSG_REF_TEMP_ID;
+					int tmp = temp_ref * 10;
+					if (tmp < 0) tmp = tmp + 65536;
+        			out_i2c_buff[1] = (tmp & 0x00FF);	
+        			out_i2c_buff[2] = (tmp & 0xFF00) >> 8;
+        			this->mtxi2c_.lock();
+					status = i2cPIC.sendData(out_i2c_buff, 3);
+					this->mtxi2c_.unlock();
+				}
 			}
             else if (device == "Airflow") {
                 printf("Received Airflow message: %s\n", command.data());
@@ -659,7 +661,7 @@ void CASU_Interface::zmqSub()
                 zmq::message_t valve_msg;
                 str_to_msg(valveCommand.c_str(), valve_msg);
                 //zmqPub_af.send(valve_msg);
-		zmq::send_multipart(zmqPub_af, casuName.c_str(), device, command, data);
+				zmq::send_multipart(zmqPub_af, casuName.c_str(), device, command, data);
             }
 			else
 			{
