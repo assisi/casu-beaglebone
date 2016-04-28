@@ -132,16 +132,10 @@ void CASU_Interface::i2cComm() {
 	log_file.flush();
 
 	while(1) {
-                //i2cMuxLock.lock();
-                //mux.writeByte(0, 1);
-		//gettimeofday(&start_time, NULL);
+        
 		this->mtxi2c_.lock();
 		status = i2cPIC.receiveData(inBuff, IN_DATA_NUM);
 		this->mtxi2c_.unlock();
-		//i2cMuxLock.unlock();
-		//gettimeofday(&current_time, NULL);
-		//t_msec = (current_time.tv_sec - start_time.tv_sec) * 1000 + (current_time.tv_usec - start_time.tv_usec)/1000;
-		//printf("I2C receive communication time stamp %.3f \n", t_msec);
 
 		if (status <= 0) {
 			cerr << "I2C initialization unsuccessful, exiting thread" << std::endl;
@@ -207,6 +201,10 @@ void CASU_Interface::i2cComm() {
 			ledCtl_s[L_R] = inBuff[42];
 			ledCtl_s[L_G] = inBuff[43];
 			ledCtl_s[L_B] = inBuff[44];
+
+			vibeAmp_s = ledCtl_s[0];
+			vibeFreq_s = ledCtl_s[1] + ledCtl_s[2] * 256;
+
 			ledDiag_s[L_R] = inBuff[45];
 			ledDiag_s[L_G] = inBuff[46];
 			ledDiag_s[L_B] = inBuff[47];
@@ -269,9 +267,9 @@ void CASU_Interface::i2cComm() {
 				printf("\n");
                 printf("temp Casu Wax Ref = %.1f %.1f %.1f\n", tempCasu, tempWax, temp_ref_rec);
 
-				printf("vibeAmp meas ref = %.1f %d", vAmp[0], ledCtl_s[0]);
+				printf("vibeAmp meas ref = %.1f %d", vAmp[0], vibeAmp_s);
 				printf("\n");
-				printf("vibeFreq meas ref = %.1f %d", vFreq[0], ledCtl_s[1] + ledCtl_s[2] * 256);
+				printf("vibeFreq meas ref = %.1f %d", vFreq[0], vibeFreq_s);
 				printf("\n");
 
 				printf("ir raw = ");
@@ -485,7 +483,7 @@ void CASU_Interface::zmqPub() {
         color_ref.SerializeToString(&data);
         zmq::send_multipart(zmqPub, casuName.c_str(), "DiagnosticLed", act_state.c_str(), data);
 
-		usleep(250000);
+		usleep(100000);
 	}
 }
 
@@ -593,15 +591,13 @@ void CASU_Interface::zmqSub()
 					cerr << "Unknown command " << command << " for " << name << "/" << device << endl;
 				}
 
-				if (vibeAmp_r != vibeAmp_s || vibeFreq_r != vibeFreq_s) {
-					out_i2c_buff[0] = MSG_REF_VIBE_ID;
-					out_i2c_buff[1] =  vibeAmp_r;
-					out_i2c_buff[2] = vibeFreq_r & 0x00FF;
-        			out_i2c_buff[3] = (vibeFreq_r & 0xFF00) >> 8;
-        			this->mtxi2c_.lock();
-					status = i2cPIC.sendData(out_i2c_buff, 4);
-					this->mtxi2c_.unlock();
-				}
+				out_i2c_buff[0] = MSG_REF_VIBE_ID;
+				out_i2c_buff[1] =  vibeAmp_r;
+				out_i2c_buff[2] = vibeFreq_r & 0x00FF;
+    			out_i2c_buff[3] = (vibeFreq_r & 0xFF00) >> 8;
+    			this->mtxi2c_.lock();
+				status = i2cPIC.sendData(out_i2c_buff, 4);
+				this->mtxi2c_.unlock();
 
 			}
 			else if (device == "EM") {
