@@ -39,38 +39,32 @@ CASU_Interface::CASU_Interface(char *fbc_file)
 	ledDiag_r[L_G] = 0;
 	ledDiag_r[L_B] = 0;
 
-	ledCtl_r[L_R] = 0;
-	ledCtl_r[L_G] = 0;
-	ledCtl_r[L_B] = 0;
-
 	irRawVals[IR_F] = 0;
 	irRawVals[IR_FR] = 0;
 	irRawVals[IR_BR] = 0;
 	irRawVals[IR_B] = 0;
 	irRawVals[IR_BL] = 0;
 	irRawVals[IR_FL] = 0;
-	irRawVals[IR_T] = 0;
 
-	temp[0] = 100;
-	temp[1] = 101;
-	temp[2] = 102;
-	temp[3] = 103;
-	temp[4] = 104;
-    temp[5] = 105;
+	temp[0] = 0.0;
+	temp[1] = 0.0;
+	temp[2] = 0.0;
+	temp[3] = 0.0;
+	temp[4] = 0.0;
+    temp[5] = 0.0;
     tempWax = -1;
     tempCasu = -1;
 
-	vAmp[0] = 0.1;
-	vAmp[1] = 0.2;
-	vAmp[2] = 0.3;
-	vAmp[3] = 0.4;
+	vAmp[0] = 0.0;
+	vAmp[1] = 0.0;
+	vAmp[2] = 0.0;
+	vAmp[3] = 0.0;
 
-	vFreq[0] = 10.0;
-	vFreq[1] = 20.0;
-	vFreq[2] = 30.0;
-	vFreq[3] = 40.0;
+	vFreq[0] = 0.0;
+	vFreq[1] = 0.0;
+	vFreq[2] = 0.0;
+	vFreq[3] = 0.0;
 
-	pwmMotor_r = 0;
 	vibeAmp_r = 0;
 	vibeFreq_r = 100;
 
@@ -84,29 +78,42 @@ CASU_Interface::CASU_Interface(char *fbc_file)
 
     temp_ref = 0.0;
     temp_ref_rec = 0.0;
-    temp_ref_cur = 0.0;
 
     calRec = 0;
     calSend = 0;
 
-	proxyThresh = 4000;
-
-    // EHM device configuration
-    // We are no longer using electro-magnetic emitters
-    //ehm_device = new EHM("/dev/ttyACM0", 9600);
-    ehm_freq_electric = 0;
-    ehm_freq_magnetic = 0;
-    ehm_temp = 0;
-
-	/*Scale freq to motor pwm
-	 * From datasheet 3V > 516 Hz
-	 * u = K * f; K = 3 / 516 = 0.0058
-	 * pwm = u / 3.3 * 100 = 30.303
-	 * pwm = k2 * f = 0.0058*30.303 = 0.1758
-	* */
-	vibeMotorConst = 0.1758;
-
     log_file.open((std::string("/home/assisi/firmware/log/") + casuName + std::string(".txt")).c_str(), ios::out);
+
+    char out_i2c_buff[20];
+    // send initial references
+    out_i2c_buff[0] = MSG_REF_VIBE_ID;
+	out_i2c_buff[1] =  vibeAmp_r;
+	out_i2c_buff[2] = vibeFreq_r & 0x00FF;
+	out_i2c_buff[3] = (vibeFreq_r & 0xFF00) >> 8;
+	this->mtxi2c_.lock();
+	status = i2cPIC.sendData(out_i2c_buff, 4);
+	this->mtxi2c_.unlock();
+	usleep(1000);
+
+	out_i2c_buff[0] = MSG_REF_TEMP_ID;
+	int tmp = temp_ref * 10;
+	if (tmp < 0) tmp = tmp + 65536;
+	out_i2c_buff[1] = (tmp & 0x00FF);	
+	out_i2c_buff[2] = (tmp & 0xFF00) >> 8;
+	this->mtxi2c_.lock();
+	status = i2cPIC.sendData(out_i2c_buff, 3);
+	this->mtxi2c_.unlock();
+	usleep(1000);
+
+	out_i2c_buff[0] = MSG_REF_LED_ID;
+	out_i2c_buff[1] =  ledDiag_r[0];
+	out_i2c_buff[2] =  ledDiag_r[1];
+	out_i2c_buff[3] =  ledDiag_r[2];
+	this->mtxi2c_.lock();
+	status = i2cPIC.sendData(out_i2c_buff, 4);
+	this->mtxi2c_.unlock();
+	usleep(1000);
+
 }
 
 CASU_Interface::~CASU_Interface() {
@@ -126,7 +133,7 @@ void CASU_Interface::i2cComm() {
 	gettimeofday(&start_time, NULL);
 	double t_msec;
 	timeval current_time;
-    sprintf(str_buff, "time temp_f temp_r temp_b temp_l temp_pcb temp_casu temp_wax temp_ref pelt mot fanAir fanCool \
+    sprintf(str_buff, "time temp_f temp_r temp_b temp_l temp_pcb temp_top temp_casu temp_wax temp_ref pelt vibeAmp_s vibeAmp_s fanCool \
             proxi_f proxi_fr proxi_br proxi_b proxi_bl proxi_fl \n");
 	log_file.write(str_buff, strlen(str_buff));
 	log_file.flush();
@@ -172,86 +179,71 @@ void CASU_Interface::i2cComm() {
 
 			dummy = inBuff[8] | (inBuff[9] << 8);
 			if (dummy > 32767)
+				temp[T_flexPCB] = (dummy - 65536.0) / 10.0;
+			else
+				temp[T_flexPCB] = dummy / 10.0;
+
+			dummy = inBuff[10] | (inBuff[11] << 8);
+			if (dummy > 32767)
 				temp[T_PCB] = (dummy - 65536.0) / 10.0;
 			else
 				temp[T_PCB] = dummy / 10.0;
 
-			vAmp[A_F] = (inBuff[10] | (inBuff[11] << 8)) / 10.0;
-			vAmp[A_R] = (inBuff[12] | (inBuff[13] << 8)) / 10.0;
-			vAmp[A_B] = (inBuff[14] | (inBuff[15] << 8)) / 10.0;
-			vAmp[A_L] = (inBuff[16] | (inBuff[17] << 8)) / 10.0;
-
-			vFreq[A_F] = (inBuff[18] | (inBuff[19] << 8)) / 10.0;
-			vFreq[A_R] = (inBuff[20] | (inBuff[21] << 8)) / 10.0;
-			vFreq[A_B] = (inBuff[22] | (inBuff[23] << 8)) / 10.0;
-			vFreq[A_L] = (inBuff[24] | (inBuff[25] << 8)) / 10.0;
-
-			irRawVals[IR_F] = inBuff[26] | (inBuff[27] << 8);
-			irRawVals[IR_FR] = inBuff[28] | (inBuff[29] << 8);
-			irRawVals[IR_BR] = inBuff[30] | (inBuff[31] << 8);
-			irRawVals[IR_B] = inBuff[32] | (inBuff[33] << 8);
-			irRawVals[IR_BL] = inBuff[34] | (inBuff[35] << 8);
-			irRawVals[IR_FL] = inBuff[36] | (inBuff[37] << 8);
-			irRawVals[IR_T]= inBuff[38] | (inBuff[39] << 8);
-
-			ctlPeltier_s = inBuff[40];
-            if (ctlPeltier_s > 100) ctlPeltier_s = ctlPeltier_s - 201;
-			pwmMotor_s = inBuff[41];
-
-			ledCtl_s[L_R] = inBuff[42];
-			ledCtl_s[L_G] = inBuff[43];
-			ledCtl_s[L_B] = inBuff[44];
-
-			vibeAmp_s = ledCtl_s[0];
-			vibeFreq_s = ledCtl_s[1] + ledCtl_s[2] * 256;
-
-			ledDiag_s[L_R] = inBuff[45];
-			ledDiag_s[L_G] = inBuff[46];
-			ledDiag_s[L_B] = inBuff[47];
-
-            airflow_s = inBuff[48];
-            fanCooler = inBuff[49];
-
-            dummy = inBuff[50] | (inBuff[51] << 8);
+			dummy = inBuff[12] | (inBuff[13] << 8);
             if (dummy > 32767)
                 tempCasu= (dummy - 65536.0) / 10.0;
             else
                 tempCasu = dummy / 10.0;
 
-            dummy = inBuff[52] | (inBuff[53] << 8);
+            dummy = inBuff[14] | (inBuff[15] << 8);
             if (dummy > 32767)
                 tempWax = (dummy - 65536.0) / 10.0;
             else
                 tempWax = dummy / 10.0;
 
-            dummy = inBuff[54] | (inBuff[55] << 8);
+            dummy = inBuff[16] | (inBuff[17] << 8);
             if (dummy > 32767)
                 temp_ref_rec = (dummy - 65536.0) / 10.0;
             else
                 temp_ref_rec = dummy / 10.0;
 
-            dummy = inBuff[56] | (inBuff[57] << 8);
-            if (dummy > 32767)
-                temp_ref_cur = (dummy - 65536.0) / 10.0;
-            else
-                temp_ref_cur = dummy / 10.0;
+			vAmp[A_F] = (inBuff[18] | (inBuff[19] << 8)) / 10.0;
+			vAmp[A_R] = (inBuff[20] | (inBuff[21] << 8)) / 10.0;
+			vAmp[A_B] = (inBuff[22] | (inBuff[23] << 8)) / 10.0;
+			vAmp[A_L] = (inBuff[24] | (inBuff[25] << 8)) / 10.0;
 
-            calRec = inBuff[58];
+			vFreq[A_F] = (inBuff[26] | (inBuff[27] << 8)) / 10.0;
+			vFreq[A_R] = (inBuff[28] | (inBuff[29] << 8)) / 10.0;
+			vFreq[A_B] = (inBuff[30] | (inBuff[31] << 8)) / 10.0;
+			vFreq[A_L] = (inBuff[32] | (inBuff[33] << 8)) / 10.0;
 
-			dummy = inBuff[59] | (inBuff[60] << 8);
-			if (dummy > 32767)
-				temp[T_flexPCB] = (dummy - 65536.0) / 10.0;
-			else
-				temp[T_flexPCB] = dummy / 10.0;       
-            
+			vibeAmp_s = inBuff[34];
+			vibeFreq_s = inBuff[35] | (inBuff[36] << 8);
+
+			irRawVals[IR_F] = inBuff[37] | (inBuff[38] << 8);
+			irRawVals[IR_FR] = inBuff[39] | (inBuff[40] << 8);
+			irRawVals[IR_BR] = inBuff[41] | (inBuff[42] << 8);
+			irRawVals[IR_B] = inBuff[43] | (inBuff[44] << 8);
+			irRawVals[IR_BL] = inBuff[45] | (inBuff[46] << 8);
+			irRawVals[IR_FL] = inBuff[47] | (inBuff[48] << 8);
+
+			ctlPeltier_s = inBuff[49];
+            if (ctlPeltier_s > 100) ctlPeltier_s = ctlPeltier_s - 201;
+
+			ledDiag_s[L_R] = inBuff[50];
+			ledDiag_s[L_G] = inBuff[51];
+			ledDiag_s[L_B] = inBuff[52];
+
+            fanCooler = inBuff[53];
+            calRec = inBuff[54];
 
 			this->mtxPub_.unlock();
 			gettimeofday(&current_time, NULL);
 			t_msec = (current_time.tv_sec - start_time.tv_sec) * 1000 + (current_time.tv_usec - start_time.tv_usec)/1000;
 			//printf("I2C data processing time stamp %.3f \n", t_msec);
-            sprintf(str_buff, "%.2f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %d %d %d %d %d %d %d %d %d %d \n",
-                    t_msec / 1000, temp[T_F], temp[T_R], temp[T_B], temp[T_L], temp[T_PCB], temp[T_flexPCB], tempCasu, tempWax, temp_ref_rec, temp_ref_cur,
-                    ctlPeltier_s, pwmMotor_s, airflow_s, fanCooler,
+            sprintf(str_buff, "%.2f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %d %d %d %d %d %d %d %d %d %d %d \n",
+                    t_msec / 1000, temp[T_F], temp[T_R], temp[T_B], temp[T_L], temp[T_PCB], temp[T_flexPCB], tempCasu, tempWax, temp_ref_rec,
+                    ctlPeltier_s, vibeAmp_s, vibeFreq_s, airflow_r, fanCooler,
                     irRawVals[IR_F], irRawVals[IR_FR], irRawVals[IR_BR], irRawVals[IR_B], irRawVals[IR_BL], irRawVals[IR_FL]);
 			log_file.write(str_buff, strlen(str_buff));
 			log_file.flush();
@@ -273,14 +265,8 @@ void CASU_Interface::i2cComm() {
 				printf("\n");
 
 				printf("ir raw = ");
-				for (int i = 0; i < 7; i++) {
+				for (int i = 0; i < 6; i++) {
 					printf("%d ", irRawVals[i]);
-				}
-				printf("\n");
-
-				printf("ledCtl = ");
-				for (int i = 0; i < 3; i++) {
-					printf("%d ", ledCtl_s[i]);
 				}
 				printf("\n");
 
@@ -290,17 +276,14 @@ void CASU_Interface::i2cComm() {
 				}
 				printf("\n");
 
-                printf("peltier, motor, airflow, fanCooler = %d %d %d %d\n", ctlPeltier_s, pwmMotor_s, airflow_r, fanCooler);
+                printf("peltier, airflow, fanCooler = %d %d %d\n", ctlPeltier_s, airflow_r, fanCooler);
 
-                printf("EM electric, EM magnetic, EM heat = %d %d %d\n", ehm_freq_electric,
-                       ehm_freq_magnetic,
-                       ehm_temp);
                 printf("calibration data rec = %d \n", calRec);
 				printf("_________________________________________________________________\n\n");
 				print_counter = 0;
 			}
 		}
-        usleep(30000);
+        usleep(40000); // total loop time 40 + 10 sec (execution of the above code) = 50 sec
         
         if (calRec == 0 || calSend == 0) {
             outBuff[0] = 2;
@@ -378,9 +361,11 @@ void CASU_Interface::zmqPub() {
 		ranges.SerializeToString(&data);
 		zmq::send_multipart(zmqPub, casuName.c_str(), "IR", "Ranges", data);
 
+		std::string act_state("On");
+
         /* Temperature and vibration measurements */
 		temp_clock++;
-		if (temp_clock == 4) {
+		if (temp_clock == 10) {
             // Temperature is published 4 times less often
 			this->mtxPub_.lock();
 			for(int i = 0; i < 6; i++) {
@@ -410,27 +395,26 @@ void CASU_Interface::zmqPub() {
 			vibes.SerializeToString(&data);
 			zmq::send_multipart(zmqPub, casuName.c_str(), "Acc", "Measurements", data);
 
+			 /* Peltier actuator setpoint */
+	        Temperature temp_ref;
+	        this->mtxPub_.lock();
+	        temp_ref.set_temp(this->temp_ref_rec);
+	        //temp_ref.set_temp(ctlPeltier_s);
+	        if (this->temp_ref_rec < 26) // What is the meaning of 26?
+	        { 
+	            act_state = "Off";
+	        }
+	        else
+	        {
+	            act_state = "On";
+	        }
+	        this->mtxPub_.unlock();
+	        temp_ref.SerializeToString(&data);
+	        zmq::send_multipart(zmqPub, casuName.c_str(), "Peltier", act_state.c_str(), data);
+
 			temp_clock = 0;
 		}
 
-        std::string act_state("On");
-        
-        /* Peltier actuator setpoint */
-        Temperature temp_ref;
-        this->mtxPub_.lock();
-        temp_ref.set_temp(this->temp_ref_rec);
-        //temp_ref.set_temp(ctlPeltier_s);
-        if (this->temp_ref_rec < 26) // What is the meaning of 26?
-        { 
-            act_state = "Off";
-        }
-        else
-        {
-            act_state = "On";
-        }
-        this->mtxPub_.unlock();
-        temp_ref.SerializeToString(&data);
-        zmq::send_multipart(zmqPub, casuName.c_str(), "Peltier", act_state.c_str(), data);
         
         /* Speaker actuator setpoint */
         VibrationSetpoint vib_ref;

@@ -31,7 +31,7 @@
 
 /*! Number of bytes received from CASU MCU through i2c communication.
  */
-#define IN_DATA_NUM 61
+#define IN_DATA_NUM 55
 
 
 /*! \brief Implements communication with CASU microcontroller (MCU), communication with a user code (CASU controller) and data logging.
@@ -147,11 +147,9 @@ EHM *ehm_device;	 /*!< Used for serial communication with electro-magnetic emitt
     float tempCasu; /*!< Estimated casu ring temperature. */
 	float vAmp[4]; /*!< Array containing latest vibration amplitude values from four sensors. */
 	float vFreq[4]; /*!< Array containing latest vibration frequency values from four sensors. */
-	int irRawVals[7]; /*!< Array containing latest infra-red proximity values from seven sensors. */
-	int ledCtl_s[3]; /*!< Array containing latest red, green and blue PWM values (0-100) of LED used as bee stimulus. */
+	int irRawVals[6]; /*!< Array containing latest infra-red proximity values from seven sensors. */
 	int ledDiag_s[3]; /*!< Array containing latest red, green and blue PWM values (0-100) of LED used as diagnostic light. */
 	int ctlPeltier_s; /*!< Latest PWM value (-100,100) set to Peltier device. */
-	int pwmMotor_s; /*!< Latest PWM value (0,100) set to vibration motor. */
     int airflow_s; /*!< Latest PWM value (0,100) set to the actuator producing airflow. */
     int fanCooler; /*!< Latest PWM value (0,100) set to the fan which cools the PCB and aluminium cooler. */
 	int vibeAmp_s; /*!< Latest reference value for speaker amplitude. */
@@ -160,14 +158,10 @@ EHM *ehm_device;	 /*!< Used for serial communication with electro-magnetic emitt
 
 	float temp_ref; /*!< Actual reference value for CASU temperature. */
     float temp_ref_rec; /*!< Setted feference value for CASU temperature received from dsPIC. */
-    float temp_ref_cur; /*!< Actual reference value for CASU temperature received from dsPIC. */
-	int ledCtl_r[3]; /*!< Actual reference values (RGB) for control LED. */
 	int ledDiag_r[3];  /*!< Actual reference values (RGB) for diagnostic LED. */
 	int vibeAmp_r; /*!< Actual reference value for speaker amplitude. */
 	int vibeFreq_r; /*!< Actual reference value for speaker frequency. */
 	
-	int pwmMotor_r; /*!< Actual reference value for speaker amplitude. */
-
     int airflow_r; /*!< Actual reference value for actuator producing airflow. */
 
     float Kp; /*!< Proportional gain of PI controller */
@@ -187,12 +181,6 @@ EHM *ehm_device;	 /*!< Used for serial communication with electro-magnetic emitt
 
 	int proxyThresh; /*!< Proximity sensor threshold. */
     std::string casuName; /*!< Used for storing CASU name. */
-
-	float vibeMotorConst; /*!< Vibration motor constant - ratio of motor frequency and motor voltage. */
-
-    int ehm_freq_electric;	/*!< Latest frequency of the electric field. */
-    int ehm_freq_magnetic; /*!< Latest frequency of the magnetic field. */
-    int ehm_temp; /*!< Latest reference temperature value for magnetic heater (when used as a heater). */
 
     std::ofstream log_file; /*!< Data stream used for logging data in txt file. */
 	timeval start_time; /*!< Stores program start time and used for logging data. */
