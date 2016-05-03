@@ -522,15 +522,15 @@ void CASU_Interface::zmqSub()
 					cerr << "Unknown command for " << name << "/" << device << endl;
 				}
 
-				if ((ledDiag_s[0] != ledDiag_r[0]) || (ledDiag_s[1] != ledDiag_r[1]) || (ledDiag_s[2] != ledDiag_r[2])) {
-					out_i2c_buff[0] = MSG_REF_LED_ID;
-					out_i2c_buff[1] =  ledDiag_r[0];
-					out_i2c_buff[2] =  ledDiag_r[1];
-					out_i2c_buff[3] =  ledDiag_r[2];
-					this->mtxi2c_.lock();
-					status = i2cPIC.sendData(out_i2c_buff, 4);
-					this->mtxi2c_.unlock();
-				}
+                //if ((ledDiag_s[0] != ledDiag_r[0]) || (ledDiag_s[1] != ledDiag_r[1]) || (ledDiag_s[2] != ledDiag_r[2])) {
+                out_i2c_buff[0] = MSG_REF_LED_ID;
+                out_i2c_buff[1] =  ledDiag_r[0];
+                out_i2c_buff[2] =  ledDiag_r[1];
+                out_i2c_buff[3] =  ledDiag_r[2];
+                this->mtxi2c_.lock();
+                status = i2cPIC.sendData(out_i2c_buff, 4);
+                this->mtxi2c_.unlock();
+                //}
 			}
 
 			else if (device == "Light") {
