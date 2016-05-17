@@ -84,6 +84,7 @@ CASU_Interface::CASU_Interface(char *fbc_file)
 
     log_file.open((std::string("/home/assisi/firmware/log/") + casuName + std::string(".txt")).c_str(), ios::out);
 
+/*
     char out_i2c_buff[20];
     // send initial references
     out_i2c_buff[0] = MSG_REF_VIBE_ID;
@@ -113,6 +114,10 @@ CASU_Interface::CASU_Interface(char *fbc_file)
 	status = i2cPIC.sendData(out_i2c_buff, 4);
 	this->mtxi2c_.unlock();
 	usleep(1000);
+
+*/
+
+
 
 }
 
