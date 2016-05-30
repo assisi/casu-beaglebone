@@ -18,7 +18,7 @@ CASU_Interface::CASU_Interface(char *fbc_file)
     casuName = fbc["name"].as<string>();
     pub_addr = fbc["pub_addr"].as<string>();
     sub_addr = fbc["sub_addr"].as<string>();
-    pub_addr_af.assign("tcp://192.168.12.253:1555");
+    pub_addr_af.assign("tcp://10.42.0.253:1555");
 
     i2c_bus = fbc["i2c_bus"].as<int>();
     picAddress = fbc["i2c_addr"].as<int>();
