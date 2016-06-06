@@ -6,6 +6,7 @@
  */
 
 #include "CASU_Interface.h"
+#include <sys/time.h>
 
 using namespace std;
 using namespace AssisiMsg;
@@ -144,7 +145,8 @@ void CASU_Interface::i2cComm() {
 	log_file.flush();
 
 	while(1) {
-        
+
+		   		       
 		this->mtxi2c_.lock();
 		status = i2cPIC.receiveData(inBuff, IN_DATA_NUM);
 		this->mtxi2c_.unlock();
@@ -351,6 +353,8 @@ void CASU_Interface::zmqPub() {
     /* Data publishing loop */
 	while (1) {
 
+	timespec actual_time;
+
         /* Proximity sensor values */
 		this->mtxPub_.lock();
 		for(int i = 0; i < 7; i++) {
@@ -363,9 +367,12 @@ void CASU_Interface::zmqPub() {
 
 		}
 		this->mtxPub_.unlock();
+		clock_gettime(CLOCK_REALTIME, &actual_time);
+		ranges.mutable_header()->mutable_stamp()->set_sec(actual_time.tv_sec);
+		ranges.mutable_header()->mutable_stamp()->set_nsec(actual_time.tv_nsec);
 		ranges.SerializeToString(&data);
 		zmq::send_multipart(zmqPub, casuName.c_str(), "IR", "Ranges", data);
-
+		
 		std::string act_state("On");
 
         /* Temperature and vibration measurements */
@@ -379,6 +386,9 @@ void CASU_Interface::zmqPub() {
             temps.set_temp(6, tempCasu);
             temps.set_temp(7, tempWax);
 			this->mtxPub_.unlock();
+			clock_gettime(CLOCK_REALTIME, &actual_time);
+			temps.mutable_header()->mutable_stamp()->set_sec(actual_time.tv_sec);
+			temps.mutable_header()->mutable_stamp()->set_nsec(actual_time.tv_nsec);
 			temps.SerializeToString(&data);
 			zmq::send_multipart(zmqPub, casuName.c_str(), "Temp", "Temperatures", data);
 
@@ -396,7 +406,9 @@ void CASU_Interface::zmqPub() {
 
 			this->mtxPub_.unlock();
 
-
+			clock_gettime(CLOCK_REALTIME, &actual_time);
+			vibes.mutable_header()->mutable_stamp()->set_sec(actual_time.tv_sec);
+			vibes.mutable_header()->mutable_stamp()->set_nsec(actual_time.tv_nsec);
 			vibes.SerializeToString(&data);
 			zmq::send_multipart(zmqPub, casuName.c_str(), "Acc", "Measurements", data);
 
@@ -414,6 +426,9 @@ void CASU_Interface::zmqPub() {
 	            act_state = "On";
 	        }
 	        this->mtxPub_.unlock();
+		clock_gettime(CLOCK_REALTIME, &actual_time);
+		temp_ref.mutable_header()->mutable_stamp()->set_sec(actual_time.tv_sec);
+		temp_ref.mutable_header()->mutable_stamp()->set_nsec(actual_time.tv_nsec);
 	        temp_ref.SerializeToString(&data);
 	        zmq::send_multipart(zmqPub, casuName.c_str(), "Peltier", act_state.c_str(), data);
 
@@ -435,6 +450,9 @@ void CASU_Interface::zmqPub() {
             act_state = "On";
         }
         this->mtxPub_.unlock();
+	clock_gettime(CLOCK_REALTIME, &actual_time);
+	vib_ref.mutable_header()->mutable_stamp()->set_sec(actual_time.tv_sec);
+	vib_ref.mutable_header()->mutable_stamp()->set_nsec(actual_time.tv_nsec);
         vib_ref.SerializeToString(&data);
         zmq::send_multipart(zmqPub, casuName.c_str(), "Speaker", act_state.c_str(), data);
 
@@ -451,6 +469,9 @@ void CASU_Interface::zmqPub() {
             act_state = "Off";
         }
         this->mtxPub_.unlock();
+	clock_gettime(CLOCK_REALTIME, &actual_time);
+	air_ref.mutable_header()->mutable_stamp()->set_sec(actual_time.tv_sec);
+	air_ref.mutable_header()->mutable_stamp()->set_nsec(actual_time.tv_nsec);
         air_ref.SerializeToString(&data);
         zmq::send_multipart(zmqPub, casuName.c_str(), "Airflow", act_state.c_str(), data);
 
@@ -469,6 +490,9 @@ void CASU_Interface::zmqPub() {
             act_state = "Off";
         }
         this->mtxPub_.unlock();
+	clock_gettime(CLOCK_REALTIME, &actual_time);
+	color_ref.mutable_header()->mutable_stamp()->set_sec(actual_time.tv_sec);
+	color_ref.mutable_header()->mutable_stamp()->set_nsec(actual_time.tv_nsec);
         color_ref.SerializeToString(&data);
         zmq::send_multipart(zmqPub, casuName.c_str(), "DiagnosticLed", act_state.c_str(), data);
 
