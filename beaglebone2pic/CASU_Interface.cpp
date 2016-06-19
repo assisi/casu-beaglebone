@@ -672,6 +672,21 @@ void CASU_Interface::zmqSub()
                 //zmqPub_af.send(valve_msg);
 				zmq::send_multipart(zmqPub_af, casuName.c_str(), device, command, data);
             }
+			
+			else if (device == "Proxy") {
+				out_i2c_buff[0] = MSG_REF_PROXY_ID;
+				
+				if (command == "On") {
+					out_i2c_buff[1] = 1;
+				}
+				else if (command == "Off")	{
+					out_i2c_buff[1] = 0;					
+				}
+
+    			this->mtxi2c_.lock();
+				status = i2cPIC.sendData(out_i2c_buff, 2);
+				this->mtxi2c_.unlock();				
+			}
 			else
 			{
 				cerr << "Unknown device " << device << endl;

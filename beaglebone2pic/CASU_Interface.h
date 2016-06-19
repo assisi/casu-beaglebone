@@ -103,7 +103,8 @@ public:
 		MSG_CAL_ID = 2,   /*!< Msg cal id */
 		MSG_REF_VIBE_ID = 3, /*!< Vibration red id */
 		MSG_REF_LED_ID = 4,  /*!< LED ref id */
-		MSG_REF_TEMP_ID = 5  /*!< Temp ref id */
+		MSG_REF_TEMP_ID = 5,  /*!< Temp ref id */
+		MSG_REF_PROXY_ID = 6
 	};
 
 
