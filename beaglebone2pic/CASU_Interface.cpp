@@ -673,13 +673,13 @@ void CASU_Interface::zmqSub()
 				zmq::send_multipart(zmqPub_af, casuName.c_str(), device, command, data);
             }
 			
-			else if (device == "Proxy") {
+			else if (device == "IR") {
 				out_i2c_buff[0] = MSG_REF_PROXY_ID;
 				
-				if (command == "On") {
+				if (command == "Standby") {
 					out_i2c_buff[1] = 1;
 				}
-				else if (command == "Off")	{
+				else if (command == "Activate")	{
 					out_i2c_buff[1] = 0;					
 				}
 
