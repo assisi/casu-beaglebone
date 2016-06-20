@@ -585,8 +585,8 @@ void CASU_Interface::zmqSub()
                     	vibeAmp_r = 0;
 
 		    		vibeFreq_r = vibe.freq();
-		    		if (vibeFreq_r > 500)
-		    			vibeFreq_r = 500;
+		    		if (vibeFreq_r > 2000)
+		    			vibeFreq_r = 2000;
 		    		else if (vibeFreq_r < 1)
 		    			vibeFreq_r = 1;
                     mtxSub_.unlock();
