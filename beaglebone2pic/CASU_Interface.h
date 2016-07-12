@@ -5,6 +5,7 @@
 #ifndef CASU_INTERFACE_H
 #define CASU_INTERFACE_H
 
+#include <vector>
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
@@ -13,13 +14,14 @@
 #include <boost/interprocess/sync/named_mutex.hpp>
 #include <boost/interprocess/sync/scoped_lock.hpp>
 #include <zmq.hpp>
-#include "dev_msgs.pb.h"
 #include "zmq_helpers.hpp"
 #include "ehm.h"
 #include <time.h>
 #include <fstream>
 #include <sstream>
 #include <yaml-cpp/yaml.h>
+
+#include "base_msgs.pb.h"
 
 /*! Number of bytes (reference data) sent to CASU MCU through i2c communication.
  */
@@ -128,6 +130,10 @@ public:
 
 private:
 
+    /*! Utiliy function for setting header timestamps 
+     */
+    void set_msg_header(AssisiMsg::Header* header);
+
 	zmq::context_t *zmqContext; /*!< ZMQ context variable.  */
 	boost::mutex mtxPub_; /*!< Mutex used for locking outgoing data. */
 	boost::mutex mtxSub_; /*!< Mutex used for locking incoming data. */
@@ -135,7 +141,7 @@ private:
     I2C_Device mux;
 	I2C_SlaveMCU i2cPIC; /*!< Used for i2c communication with CASU MCU. */
 	
-EHM *ehm_device;	 /*!< Used for serial communication with electro-magnetic emitter control board. */
+    EHM *ehm_device;	 /*!< Used for serial communication with electro-magnetic emitter control board. */
 
 	char outBuff[20]; /*!< Buffer for i2c outgoing data.  */
     char inBuff[61]; /*!< Buffer for i2c incoming data. */
@@ -162,7 +168,14 @@ EHM *ehm_device;	 /*!< Used for serial communication with electro-magnetic emitt
 	int ledDiag_r[3];  /*!< Actual reference values (RGB) for diagnostic LED. */
 	int vibeAmp_r; /*!< Actual reference value for speaker amplitude. */
 	int vibeFreq_r; /*!< Actual reference value for speaker frequency. */
-	
+
+    /* Vibration pattern parameters */
+    std::vector<unsigned> vibe_periods;
+    std::vector<unsigned> idle_periods;
+    std::vector<float> vibe_freqs;
+    std::vector<unsigned> vibe_amps;
+	bool vibe_pattern_on;
+
     int airflow_r; /*!< Actual reference value for actuator producing airflow. */
 
     float Kp; /*!< Proportional gain of PI controller */

@@ -31,3 +31,6 @@
 build
 build*
 
+# Emacs droppins
+\#*
+.\#*
