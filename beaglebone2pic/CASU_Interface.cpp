@@ -468,7 +468,13 @@ void CASU_Interface::zmqPub() {
         /* Vibration pattern setpoint */
         VibrationPattern vibe_pattern;
         this->mtxPub_.lock();
-        
+        for (int i = 0; i < vibe_periods.size(); i++)
+        {
+            vibe_pattern.add_vibe_periods(vibe_periods[i]);
+            vibe_pattern.add_idle_periods(idle_periods[i]);
+            vibe_pattern.add_vibe_freqs(vibe_freqs[i]);
+            vibe_pattern.add_vibe_amps(vibe_amps[i]);
+        }
         if (vibe_pattern_on)
         {
             act_state = "On";
