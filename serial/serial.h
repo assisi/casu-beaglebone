@@ -30,6 +30,8 @@ public:
 	 */
 	Serial(char *port, unsigned long baudRate);
 
+    Serial();
+
 	/*! \brief Destructor.
 	 */
 	virtual ~Serial();

@@ -13,10 +13,13 @@
 #include <errno.h>   /* Error number definitions */
 #include <termios.h> /* POSIX terminal control definitions */
 #include <termio.h>
-
 #include "serial.h"
 
 using namespace std;
+
+Serial::Serial() {
+
+}
 
 Serial::Serial(char *port, unsigned long baudRate) {
 

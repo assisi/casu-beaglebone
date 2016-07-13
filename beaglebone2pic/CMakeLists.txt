@@ -22,7 +22,7 @@ set(Proto_FILES ../msg/base_msgs.proto
 
 set(PROTOBUF_IMPORT_DIRS ${PROTOBUF_IMPORT_DIRS}
                          ${CMAKE_SOURCE_DIR}/msg)
-PROTOBUF_GENERATE_CPP(ProtoSources ProtoHeaders ${Proto_FILES})
+#PROTOBUF_GENERATE_CPP(ProtoSources ProtoHeaders ${Proto_FILES})
 
 # Set up include directories
 include_directories(${CMAKE_SOURCE_DIR}/serial
@@ -33,16 +33,13 @@ include_directories(${CMAKE_SOURCE_DIR}/serial
                     ${CMAKE_FIND_ROOT_PATH}/include/)
 
 # Casu firmware sources
-set(casu_fw_SOURCES airsense_fw.cpp
-                    CASU_Interface.cpp
+set(airsense_fw_SOURCES airsense_fw.cpp
                     ../serial/serial.cpp
-                    ../i2c/i2cDevice.cpp
-                    ../i2c/i2cSlaveMCU.cpp
                     ../ehm/ehm.cpp
-                    ${ProtoSources})
+                    )
 
 # Set -rpath-link linker flags, to prevent weird 2nd-order-dependency linker errors that cost me a handfll of gray hair
 set(CMAKE_EXE_LINKER_FLAGS "-Wl,-rpath-link,${CMAKE_FIND_ROOT_PATH}/usr/lib/ -Wl,-rpath,${CMAKE_FIND_ROOT_PATH}/usr/lib/ -Wl,-rpath-link,${CMAKE_FIND_ROOT_PATH}/lib/arm-linux-gnueabihf -Wl,-rpath,${CMAKE_FIND_ROOT_PATH}/lib/arm-linux-gnueabihf")
 
-add_executable(casu-fw ${casu_fw_SOURCES})
-target_link_libraries(casu-fw ${ZeroMQ_LIBRARY} ${PROTOBUF_LIBRARY} ${Boost_LIBRARIES} ${yaml-cpp_LIBRARY} ${CMAKE_FIND_ROOT_PATH}/usr/lib/arm-linux-gnueabihf/libpthread.so)
+add_executable(airsense-fw ${airsense_fw_SOURCES})
+target_link_libraries(airsense-fw ${ZeroMQ_LIBRARY} ${PROTOBUF_LIBRARY} ${Boost_LIBRARIES} ${yaml-cpp_LIBRARY} ${CMAKE_FIND_ROOT_PATH}/usr/lib/arm-linux-gnueabihf/libpthread.so)
