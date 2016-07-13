@@ -59,6 +59,8 @@ int Serial::Open() {
 						break;
 			case 115200:cfsetispeed(&options, B115200);
 						break;
+            case 460800:cfsetispeed(&options, B460800);
+                    break;
 			default: cerr << "Unsupported baud rate" << endl;
 					 return 0;
 		}

@@ -33,7 +33,7 @@ include_directories(${CMAKE_SOURCE_DIR}/serial
                     ${CMAKE_FIND_ROOT_PATH}/include/)
 
 # Casu firmware sources
-set(casu_fw_SOURCES mainApp.cpp
+set(casu_fw_SOURCES airsense_fw.cpp
                     CASU_Interface.cpp
                     ../serial/serial.cpp
                     ../i2c/i2cDevice.cpp
