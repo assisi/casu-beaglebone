@@ -63,3 +63,13 @@ sudo dd if=/dev/mmcblk0 of=/dev/mmcblk` bs=4M
 
 If the SD card is larger than the BeagleBone's internal memory, you might get a "Not enough space on the device" error which can be safely ignored.
 
+Configuring the BeagleBone
+==========================
+
+The following steps are necessary to configure the Beaglebone
+
+- Assign the appropriate IP adress in `/etc/network/interfaces` (from the `10.42.0.1xx` range)
+- configure the hostnames in `/etc/hosts`
+- update (and rebuild) the firmware
+- provide appropriate `.fbc` files
+- update `/etc/rc.local` to start the appropriate firmware
