@@ -78,7 +78,8 @@ CASU_Interface::CASU_Interface(char *fbc_file)
     vibe_periods.push_back(0);
     idle_periods.push_back(0);
     vibe_freqs.push_back(0.0);
-    vibe_amps.push_back(100);
+    vibe_amps.push_back(0);
+    vibe_pattern_idx = 0;
     vibe_pattern_on = false;
 
     airflow_r = 0;
@@ -645,6 +646,52 @@ void CASU_Interface::zmqSub()
                 status = i2cPIC.sendData(out_i2c_buff, 4);
                 this->mtxi2c_.unlock();
 
+            }
+            else if (device == "VibrationPattern")
+            {
+                AssisiMsg::VibrationPattern vp;
+                mtxSub_.lock();
+                vibe_periods.clear();
+                idle_periods.clear();
+                vibe_freqs.clear();
+                vibe_amps.clear();
+                if (command == "On")
+                {
+                    assert(vp.ParseFromString(data));
+                    // Check that the sizes of all fields match
+                    assert(vp.vibe_periods_size() == vp.idle_periods_size()
+                           == vp.vibe_freqs_size() == vp.vibe_amps_size());
+                    // Unpack values
+                    for (int i = 0; i < vp.vibe_periods_size(); i++)
+                    {
+                        // TODO: Check ranges!
+                        vibe_periods.push_back(vp.vibe_periods(i));
+                        idle_periods.push_back(vp.idle_periods(i));
+                        vibe_freqs.push_back(vp.vibe_freqs(i));
+                        vibe_amps.push_back(vp.vibe_amps(i));
+                    }
+                    vibe_pattern_idx = 0;
+                    vibe_pattern_on = false;
+                }
+                else if (command == "Off")
+                {
+                    vibe_periods.push_back(0);
+                    idle_periods.push_back(0);
+                    vibe_freqs.push_back(0.0);
+                    vibe_amps.push_back(0);
+                    vibe_pattern_idx = 0;
+                    vibe_pattern_on = false;
+                }
+                else
+                {
+                    cerr << "Unknown command " << command << " for " << name << "/" << device << endl;
+                }
+                mtxSub_.unlock();
+                /*
+                  This does not compile and seems superflous anyways
+                std::cout << "Vibe pattern " << vibe_periods << " " << idle_periods 
+                          << " " << vibe_freqs << " " << vibe_amps << std::endl;
+                */
             }
             else if (device == "EM") {
 

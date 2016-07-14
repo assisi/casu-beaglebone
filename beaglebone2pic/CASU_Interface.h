@@ -174,6 +174,7 @@ private:
     std::vector<unsigned> idle_periods;
     std::vector<float> vibe_freqs;
     std::vector<unsigned> vibe_amps;
+    unsigned vibe_pattern_idx;
 	bool vibe_pattern_on;
 
     int airflow_r; /*!< Actual reference value for actuator producing airflow. */
