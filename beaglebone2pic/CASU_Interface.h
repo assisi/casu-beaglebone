@@ -171,7 +171,6 @@ private:
 
     /* Vibration pattern parameters */
     std::vector<unsigned> vibe_periods;
-    std::vector<unsigned> idle_periods;
     std::vector<float> vibe_freqs;
     std::vector<unsigned> vibe_amps;
     unsigned vibe_pattern_idx;

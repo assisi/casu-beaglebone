@@ -76,7 +76,6 @@ CASU_Interface::CASU_Interface(char *fbc_file)
     vibeFreq_s = 100;
 
     vibe_periods.push_back(0);
-    idle_periods.push_back(0);
     vibe_freqs.push_back(0.0);
     vibe_amps.push_back(0);
     vibe_pattern_idx = 0;
@@ -472,7 +471,6 @@ void CASU_Interface::zmqPub() {
         for (int i = 0; i < vibe_periods.size(); i++)
         {
             vibe_pattern.add_vibe_periods(vibe_periods[i]);
-            vibe_pattern.add_idle_periods(idle_periods[i]);
             vibe_pattern.add_vibe_freqs(vibe_freqs[i]);
             vibe_pattern.add_vibe_amps(vibe_amps[i]);
         }
@@ -652,21 +650,19 @@ void CASU_Interface::zmqSub()
                 AssisiMsg::VibrationPattern vp;
                 mtxSub_.lock();
                 vibe_periods.clear();
-                idle_periods.clear();
                 vibe_freqs.clear();
                 vibe_amps.clear();
                 if (command == "On")
                 {
                     assert(vp.ParseFromString(data));
                     // Check that the sizes of all fields match
-                    assert(vp.vibe_periods_size() == vp.idle_periods_size()
-                           == vp.vibe_freqs_size() == vp.vibe_amps_size());
+                    assert((vp.vibe_periods_size() == vp.vibe_freqs_size()) 
+                           && (vp.vibe_freqs_size() == vp.vibe_amps_size()));
                     // Unpack values
                     for (int i = 0; i < vp.vibe_periods_size(); i++)
                     {
                         // TODO: Check ranges!
                         vibe_periods.push_back(vp.vibe_periods(i));
-                        idle_periods.push_back(vp.idle_periods(i));
                         vibe_freqs.push_back(vp.vibe_freqs(i));
                         vibe_amps.push_back(vp.vibe_amps(i));
                     }
@@ -676,7 +672,6 @@ void CASU_Interface::zmqSub()
                 else if (command == "Off")
                 {
                     vibe_periods.push_back(0);
-                    idle_periods.push_back(0);
                     vibe_freqs.push_back(0.0);
                     vibe_amps.push_back(0);
                     vibe_pattern_idx = 0;
