@@ -6,6 +6,7 @@
 #define CASU_INTERFACE_H
 
 #include <vector>
+#include <algorithm>
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
@@ -109,6 +110,14 @@ public:
 		MSG_REF_PROXY_ID = 6
 	};
 
+    /*! \brief Maximum vibration frequency */
+    static const double VIBE_FREQ_MAX = 1500.0;
+
+    /*! \brief Maximum vibration amplitude */
+    static const unsigned VIBE_AMP_MAX = 100;
+
+    /*! \brief Minimm vibration pattern period, in milliseconds */
+    static const unsigned VIBE_PATTERN_PERIOD_MIN = 100;
 
 	/*! Thread safe method that implements i2c communication with CASU MCU slave.
 	*/
@@ -127,6 +136,16 @@ public:
 	 * Data is received through ZMQ midlleware in a form of protobuf messages.
 	 */
     void zmqSub();
+
+    /*!
+      Method for controlling vibration amplitude and frequency
+     */
+    void set_vibration(double freq, double amp);
+
+    /*!
+      Method for stopping vibration.
+     */
+    void stop_vibration();
 
 private:
 
@@ -159,15 +178,16 @@ private:
 	int ctlPeltier_s; /*!< Latest PWM value (-100,100) set to Peltier device. */
     int airflow_s; /*!< Latest PWM value (0,100) set to the actuator producing airflow. */
     int fanCooler; /*!< Latest PWM value (0,100) set to the fan which cools the PCB and aluminium cooler. */
-	int vibeAmp_s; /*!< Latest reference value for speaker amplitude. */
-	int vibeFreq_s; /*!< Latest reference value for speaker frequency. */
-
 
 	float temp_ref; /*!< Actual reference value for CASU temperature. */
     float temp_ref_rec; /*!< Setted feference value for CASU temperature received from dsPIC. */
 	int ledDiag_r[3];  /*!< Actual reference values (RGB) for diagnostic LED. */
+
+	int vibeAmp_s; /*!< Latest reference value for speaker amplitude. */
+	int vibeFreq_s; /*!< Latest reference value for speaker frequency. */
 	int vibeAmp_r; /*!< Actual reference value for speaker amplitude. */
 	int vibeFreq_r; /*!< Actual reference value for speaker frequency. */
+    bool vibration_on;
 
     /* Vibration pattern parameters */
     std::vector<unsigned> vibe_periods;
@@ -201,4 +221,9 @@ private:
 
 };
 
+template <typename T>
+T clamp(const T& n, const T& lower, const T& upper)
+{
+    return std::max(lower, std::min(n, upper));
+}
 #endif
