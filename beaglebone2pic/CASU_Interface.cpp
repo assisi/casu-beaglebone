@@ -789,8 +789,10 @@ void CASU_Interface::stop_vibration()
 
 void CASU_Interface::update_vibration_pattern()
 {
-    std::cout << "Tajmer!!!" << std::endl;
-    timer_vp->expires_at(timer_vp->expires_at() + boost::posix_time::seconds(1));
+    static boost::posix_time::ptime const epoch(boost::gregorian::date(1970,1,1));
+    boost::posix_time::ptime now = boost::posix_time::microsec_clock::universal_time();
+    timer_log <<  (now - epoch).total_milliseconds() << std::endl;
+    timer_vp->expires_at(timer_vp->expires_at() + boost::posix_time::milliseconds(100));
     timer_vp->async_wait(boost::bind(&CASU_Interface::update_vibration_pattern,this));
 }
 
@@ -806,6 +808,7 @@ void CASU_Interface::periodic_jobs()
 {
     // We'll just set up the necessary timers and
     // run the boost::asio::io_service loop
+    timer_log.open("timer.log");
     timer_vp->async_wait(boost::bind(&CASU_Interface::update_vibration_pattern,this));
     io.run();
 }
