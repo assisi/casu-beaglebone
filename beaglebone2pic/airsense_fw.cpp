@@ -8,7 +8,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include <boost/thread.hpp>
+//#include <boost/thread.hpp>
 #include <yaml-cpp/yaml.h>
 #include <serial.h>
 #include <csignal>
@@ -28,7 +28,7 @@ void signalHandler( int signum )
 {
     cout << "Interrupt signal (" << signum << ") received.\n";
 
-    // cleanup and close up stuff here  
+    // cleanup and close up stuff here
     // terminate program
 
     serial_port->writeBytes((unsigned char*) STOP_CMD, 4);
@@ -37,19 +37,19 @@ void signalHandler( int signum )
     log_file.close();
     serial_port->Close();
     delete serial_port;
-    exit(signum);  
+    exit(signum);
 
 }
 
 int main(int argc, char **argv) {
 
-    if (argc < 3)
+    if (argc < 2)
     {
-        cout << "Please provide the serial port name and baud rate as the program arguments." << endl;
+        cout << "Please provide the cfg file as the argument." << endl;
         exit(1);
     }
 
-    signal(SIGINT, signalHandler);  
+    signal(SIGINT, signalHandler);
 
     timeval start_time; /*!< Stores program start time and used for logging data. */
     timeval current_time;
@@ -60,46 +60,57 @@ int main(int argc, char **argv) {
     char chr_buff[256] = {'\0'};
     char start[24] = {'\0'};
     char end[24] = {'\0'};
-    int rec_var = 0; 
+    int rec_var = 0;
     uint32_t left_rms;
     uint32_t left_mean;
     uint32_t right_rms;
     uint32_t right_mean;
     char date_airsense[50];
-    uint16_t day;
-    uint16_t month;
-    uint16_t hour;
-    uint16_t minute;
-    uint16_t second;
+    std::string port, baud, log_file_name;
+
+
+    struct tm *time_struct;
 
     long            ms; // Milliseconds
     time_t          s;  // Seconds
 
+    YAML::Node cfg = YAML::LoadFile(argv[1]);
+    port = cfg["port"].as<string>();
+    baud = cfg["baud_rate"].as<string>();
+    log_file_name = cfg["log_file"].as<string>();
+
     std::cout << argv[1] << std::endl;
-    std::cout << argv[2] << std::endl;
-    
-    serial_port = new Serial(argv[1], atoi(argv[2]));
+
+    std::cout << "Opening log file" << std::endl;
+
+    time_t t = time(NULL);
+    time_struct = localtime(&t);
+    std::cout << time_struct->tm_year + 1900 << " "<< time_struct->tm_mon + 1<< " "<< time_struct->tm_mday<< std::endl;
+    std::cout << time_struct->tm_hour << " "<< time_struct->tm_min << " "<< time_struct->tm_sec<< std::endl;
+    sprintf(str_buff, "%s_%d_%d_%d_%d_%0d.txt", log_file_name.c_str(), (int)time_struct->tm_year + 1900, (int)time_struct->tm_mon + 1, (int)time_struct->tm_mday, (int)time_struct->tm_hour, (int)time_struct->tm_min);
+    log_file.open(str_buff, ios::out);
+    //gettimeofday(&start_time, NULL);
+
+    serial_port = new Serial((char *)port.c_str(), atoi((char *)baud.c_str()));
     serial_port->Open();
 
     std::cout << "Opened serial port" << std::endl;
 
     usleep(100000);
-    
+
     // write command to init board
     send_bytes = serial_port->writeBytes((unsigned char*) INIT_CMD, 6);
     //std::cout << "Sent " << send_bytes << "bytes." << std::endl;
-    usleep(50000);
 
-    serial_port->readBytes((uint8_t *)chr_buff, buff_size);
-    
-    std::cout << chr_buff << std::endl;
-    
-    std::cout << "Opening log file" << std::endl;
-
-    log_file.open(std::string("/home/assisi/airsense_log.txt").c_str(), ios::out);
-    gettimeofday(&start_time, NULL);
+    for (int i = 0; i<3; i++) {
+        usleep(200000);
+        serial_port->readBytes((uint8_t *)chr_buff, buff_size);
+        std::cout << chr_buff << std::endl;
+    }
 
     std::cout << "Entering while loop" << std::endl;
+
+
 
     while (1) {
         //write command to read measurement
@@ -110,20 +121,20 @@ int main(int argc, char **argv) {
         //    std::cout << "Waiting for data " << std::endl;
         //    usleep(10000);
         //}
-        usleep(70000);
+        usleep(150000);
         rec_var = serial_port->readBytes((uint8_t *)chr_buff, buff_size);
-        chr_buff[rec_var] = '\0';                    
+        chr_buff[rec_var] = '\0';
         std::cout << chr_buff << std::endl;
-        
+
         rec_var = sscanf(chr_buff, "%s %s %d %d %d %d %s", start, date_airsense,
                             &left_rms, &left_mean, &right_rms, &right_mean, end);
-        
+
         if (rec_var == 7) {
             std::cout << "Received 7 values " << left_rms << " "<< left_mean << " "<< right_rms << " "<< right_mean << std::endl;
             //gettimeofday(&current_time, NULL);
             struct timespec time_spec;
             clock_gettime(CLOCK_REALTIME, &time_spec);
-            std::cout << time_spec.tv_sec << std::endl;            
+            std::cout << time_spec.tv_sec << std::endl;
             time_sec = time_spec.tv_sec + time_spec.tv_nsec / 1000000000.0;
             //write line to log file
             sprintf(str_buff, "%.3f, %s, %d, %d, %d, %d\r\n", time_sec, date_airsense, left_rms, left_mean, right_rms, right_mean);
@@ -133,8 +144,8 @@ int main(int argc, char **argv) {
         else {
             std::cout << "Received "<< rec_var <<"values "<<std::endl;
         }
-        
-        usleep(30000);
+
+        usleep(50000);
     }
 
     serial_port->writeBytes((unsigned char*) STOP_CMD, 4);
@@ -143,5 +154,5 @@ int main(int argc, char **argv) {
     log_file.close();
     serial_port->Close();
     delete serial_port;
-	return 0;
+    return 0;
 }
