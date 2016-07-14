@@ -18,6 +18,8 @@
 
 using namespace std;
 using namespace AssisiMsg;
+using namespace boost::posix_time;
+using namespace boost::asio;
 
 CASU_Interface::CASU_Interface(char *fbc_file)
     {
@@ -99,9 +101,9 @@ CASU_Interface::CASU_Interface(char *fbc_file)
     calRec = 0;
     calSend = 0;
 
-    log_file.open((std::string("/home/assisi/firmware/log/") + casuName + std::string(".txt")).c_str(), ios::out);
+    log_file.open((string("/home/assisi/firmware/log/") + casuName + string(".txt")).c_str(), ios::out);
 
-    timer_vp.reset(new boost::asio::deadline_timer(io, boost::posix_time::seconds(1))); 
+    timer_vp.reset(new deadline_timer(io, seconds(86400))); 
 /*
     char out_i2c_buff[20];
     // send initial references
@@ -789,10 +791,15 @@ void CASU_Interface::stop_vibration()
 
 void CASU_Interface::update_vibration_pattern()
 {
-    static boost::posix_time::ptime const epoch(boost::gregorian::date(1970,1,1));
-    boost::posix_time::ptime now = boost::posix_time::microsec_clock::universal_time();
-    timer_log <<  (now - epoch).total_milliseconds() << std::endl;
-    timer_vp->expires_at(timer_vp->expires_at() + boost::posix_time::milliseconds(100));
+    if (vibe_pattern_on)
+    {
+        
+        timer_vp->expires_at(timer_vp->expires_at() + boost::posix_time::milliseconds(86400));
+    }
+    else
+    {
+        timer_vp->expires_at(timer_vp->expires_at() + boost::posix_time::seconds(86400));
+    }
     timer_vp->async_wait(boost::bind(&CASU_Interface::update_vibration_pattern,this));
 }
 
@@ -808,7 +815,6 @@ void CASU_Interface::periodic_jobs()
 {
     // We'll just set up the necessary timers and
     // run the boost::asio::io_service loop
-    timer_log.open("timer.log");
     timer_vp->async_wait(boost::bind(&CASU_Interface::update_vibration_pattern,this));
     io.run();
 }

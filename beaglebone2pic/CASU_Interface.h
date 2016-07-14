@@ -236,7 +236,6 @@ private:
     std::string casuName; /*!< Used for storing CASU name. */
 
     std::ofstream log_file; /*!< Data stream used for logging data in txt file. */
-    std::ofstream timer_log;
 	timeval start_time; /*!< Stores program start time and used for logging data. */
 
     // Boost.Asio utilities for scheduling periodic jobs
