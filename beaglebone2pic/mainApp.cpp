@@ -5,7 +5,6 @@
 
 #include "CASU_Interface.h"
 
-#include <boost/thread.hpp>
 #include <yaml-cpp/yaml.h>
 
 #include <iostream>
@@ -31,13 +30,9 @@ int main(int argc, char **argv) {
         exit(1);
     }
 
-    CASU_Interface BBBintf(argv[1]);
+    CASU_Interface casu(argv[1]);
 
-	boost::thread_group threads;
-	threads.create_thread(boost::bind(&CASU_Interface::i2cComm, &BBBintf));
-    threads.create_thread(boost::bind(&CASU_Interface::zmqPub, &BBBintf));
-    threads.create_thread(boost::bind(&CASU_Interface::zmqSub, &BBBintf));
-	threads.join_all();
+    casu.run();
 
 	return 0;
 }

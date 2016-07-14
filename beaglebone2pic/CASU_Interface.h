@@ -7,20 +7,25 @@
 
 #include <vector>
 #include <algorithm>
-#include <stdio.h>
-#include <stdlib.h>
 #include <iostream>
-#include "i2cSlaveMCU.h"
-#include <boost/thread/mutex.hpp>
-#include <boost/interprocess/sync/named_mutex.hpp>
-#include <boost/interprocess/sync/scoped_lock.hpp>
-#include <zmq.hpp>
-#include "zmq_helpers.hpp"
-#include "ehm.h"
-#include <time.h>
 #include <fstream>
 #include <sstream>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+#include <boost/thread/mutex.hpp>
+#include <boost/asio.hpp>
+#include <boost/scoped_ptr.hpp>
+//#include <boost/interprocess/sync/named_mutex.hpp>
+//#include <boost/interprocess/sync/scoped_lock.hpp>
+
+#include <zmq.hpp>
 #include <yaml-cpp/yaml.h>
+
+#include "i2cSlaveMCU.h"
+#include "zmq_helpers.hpp"
+#include "ehm.h"
 
 #include "base_msgs.pb.h"
 
@@ -119,6 +124,11 @@ public:
     /*! \brief Minimm vibration pattern period, in milliseconds */
     static const unsigned VIBE_PATTERN_PERIOD_MIN = 100;
 
+    /*! Main CASU communication loop
+      Starts all communication and periodic job threads.
+    */
+    void run();
+
 	/*! Thread safe method that implements i2c communication with CASU MCU slave.
 	*/
 	void i2cComm();
@@ -152,6 +162,15 @@ private:
     /*! Utiliy function for setting header timestamps 
      */
     void set_msg_header(AssisiMsg::Header* header);
+
+    /*! Function for handling periodic jobs
+     */
+    void periodic_jobs();
+    
+    /*! Function for updating the vibration pattern
+     */
+    //void update_vibration_pattern(const boost::system::error_code& e);
+    void update_vibration_pattern();
 
 	zmq::context_t *zmqContext; /*!< ZMQ context variable.  */
 	boost::mutex mtxPub_; /*!< Mutex used for locking outgoing data. */
@@ -218,6 +237,10 @@ private:
 
     std::ofstream log_file; /*!< Data stream used for logging data in txt file. */
 	timeval start_time; /*!< Stores program start time and used for logging data. */
+
+    // Boost.Asio utilities for scheduling periodic jobs
+    boost::asio::io_service io;
+    boost::scoped_ptr<boost::asio::deadline_timer> timer_vp;
 
 };
 
