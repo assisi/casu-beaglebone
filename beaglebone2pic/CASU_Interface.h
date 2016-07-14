@@ -116,13 +116,13 @@ public:
 	};
 
     /*! \brief Maximum vibration frequency */
-    static const double VIBE_FREQ_MAX = 1500.0;
+    static const double VIBE_FREQ_MAX;
 
     /*! \brief Maximum vibration amplitude */
-    static const unsigned VIBE_AMP_MAX = 100;
+    static const unsigned VIBE_AMP_MAX;
 
     /*! \brief Minimm vibration pattern period, in milliseconds */
-    static const unsigned VIBE_PATTERN_PERIOD_MIN = 100;
+    static const unsigned VIBE_PATTERN_PERIOD_MIN;
 
     /*! Main CASU communication loop
       Starts all communication and periodic job threads.

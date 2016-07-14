@@ -810,3 +810,6 @@ void CASU_Interface::periodic_jobs()
     io.run();
 }
 
+/* static */ const double CASU_Interface::VIBE_FREQ_MAX = 1500.0;
+/* static */ const unsigned CASU_Interface::VIBE_AMP_MAX = 100;
+/* static */ const unsigned CASU_Interface::VIBE_PATTERN_PERIOD_MIN = 100;
