@@ -84,8 +84,8 @@ CASU_Interface::CASU_Interface(char *fbc_file)
 
     vibration_on = false;
 
-    vibe_periods.push_back(0);
-    vibe_freqs.push_back(0.0);
+    vibe_periods.push_back(1000);
+    vibe_freqs.push_back(1.0);
     vibe_amps.push_back(0);
     vibe_pattern_idx = 0;
     vibe_pattern_on = false;
@@ -103,7 +103,9 @@ CASU_Interface::CASU_Interface(char *fbc_file)
 
     log_file.open((string("/home/assisi/firmware/log/") + casuName + string(".txt")).c_str(), ios::out);
 
-    timer_vp.reset(new deadline_timer(io, seconds(86400))); 
+    // Default period for checking for vibration pattern setpoints
+    // is 1 second.
+    timer_vp.reset(new deadline_timer(io, seconds(1))); 
 /*
     char out_i2c_buff[20];
     // send initial references
@@ -613,52 +615,31 @@ void CASU_Interface::zmqSub()
                 this->mtxi2c_.unlock();
                 //}
             }
-
-            else if (device == "Light") {
-
-                printf("Received Light device message: %s\n \
-                       ...Discarding message as we are now longer using light as an actuator", command.data());
-
-            }
-
             else if (device == "Speaker") {
 
                 printf("Received speaker command: %s", command.data());
 
                 if (command == "On") 
                 {
-
                     AssisiMsg::VibrationSetpoint vibe;
                     assert(vibe.ParseFromString(data));
-                    mtxSub_.lock();
+                    // We've received a vibration setpoint
+                    // This cancels the pattern that might be running
+                    vibe_pattern_on = false;
                     this->set_vibration(vibe.freq(),vibe.amplitude());
-                    mtxSub_.unlock();
                 }
                 else if (command == "Off") {
-                    mtxSub_.lock();
                     stop_vibration();
-                    mtxSub_.unlock();
                 }
                 else {
                     cerr << "Unknown command " << command << " for " << name << "/" << device << endl;
                 }
 
-                out_i2c_buff[0] = MSG_REF_VIBE_ID;
-                out_i2c_buff[1] =  vibeAmp_r;
-                out_i2c_buff[2] = vibeFreq_r & 0x00FF;
-                out_i2c_buff[3] = (vibeFreq_r & 0xFF00) >> 8;
-                this->mtxi2c_.lock();
-                status = i2cPIC.sendData(out_i2c_buff, 4);
-                this->mtxi2c_.unlock();
-
             }
             else if (device == "VibrationPattern")
             {
                 AssisiMsg::VibrationPattern vp;
-                mtxSub_.lock();
-                vibe_periods.clear();
-                vibe_freqs.clear();
-                vibe_amps.clear();
+
                 if (command == "On")
                 {
                     assert(vp.ParseFromString(data));
@@ -666,22 +647,25 @@ void CASU_Interface::zmqSub()
                     assert((vp.vibe_periods_size() == vp.vibe_freqs_size()) 
                            && (vp.vibe_freqs_size() == vp.vibe_amps_size()));
                     // Unpack values
+                    mtxSub_.lock();
+                    vibe_periods.clear();
+                    vibe_freqs.clear();
+                    vibe_amps.clear();
                     for (int i = 0; i < vp.vibe_periods_size(); i++)
                     {
-                        vibe_periods.push_back(clamp(vp.vibe_periods(i),VIBE_PATTERN_PERIOD_MIN, UINT_MAX));
+                        vibe_periods.push_back(clamp(vp.vibe_periods(i),VIBE_PATTERN_PERIOD_MIN,UINT_MAX));
                         vibe_freqs.push_back(vp.vibe_freqs(i));
                         vibe_amps.push_back(vp.vibe_amps(i));
                     }
                     vibe_pattern_idx = 0;
                     vibe_pattern_on = true;
-                }
-                else if (command == "Off")
-                {
-                    vibe_periods.push_back(0);
-                    vibe_freqs.push_back(0.0);
-                    vibe_amps.push_back(0);
-                    vibe_pattern_idx = 0;
-                    vibe_pattern_on = false;
+                    mtxSub_.unlock();
+                    /*
+                      We're not explicitly starting the vibration pattern.
+                      Instead, we rely on the update rate of timer_vp,
+                      which is currently set to 1s.
+                      This simplifies our code, but can be changed if necessary.
+                    */
                 }
                 else
                 {
@@ -776,30 +760,83 @@ void CASU_Interface::zmqSub()
 
 void CASU_Interface::set_vibration(double freq, double amp)
 {
+    mtxSub_.lock();
     vibeFreq_r = clamp(freq, 1.0, VIBE_FREQ_MAX);
     vibeAmp_r = clamp(static_cast<unsigned>(amp), 0U, VIBE_AMP_MAX);
-    vibration_on = true;
+    // This check is necessary because of a possible race condition
+    // between update_vibration_pattern() and stop_vibration()
+    if (vibeAmp_r > 0)
+    {
+        vibration_on = true;
+    }
+    else
+    {
+        vibration_on = false;
+    }
+    mtxSub_.unlock();
+
+    // Send vibration command over i2c
+    char out_i2c_buff[4];
+    out_i2c_buff[0] = MSG_REF_VIBE_ID;
+    out_i2c_buff[1] =  vibeAmp_r;
+    out_i2c_buff[2] = vibeFreq_r & 0x00FF;
+    out_i2c_buff[3] = (vibeFreq_r & 0xFF00) >> 8;
+    this->mtxi2c_.lock();
+    status = i2cPIC.sendData(out_i2c_buff, 4);
+    this->mtxi2c_.unlock();
 }
 
 void CASU_Interface::stop_vibration()
 {
+    mtxSub_.lock();
+    // Stop the vibrations
     vibeAmp_r = 0;
+    vibeFreq_r = 1;
     vibration_on = false;
     // Also stop the vibration pattern.
     vibe_pattern_on = false;
+    vibe_periods.clear(); vibe_periods.push_back(1000);
+    vibe_freqs.clear(); vibe_freqs.push_back(1.0);
+    vibe_amps.clear(); vibe_amps.push_back(0);
+    vibe_pattern_idx = 0;
+    mtxSub_.unlock();
+
+    // Send vibration command over i2c
+    char out_i2c_buff[4];
+    out_i2c_buff[0] = MSG_REF_VIBE_ID;
+    out_i2c_buff[1] =  vibeAmp_r;
+    out_i2c_buff[2] = vibeFreq_r & 0x00FF;
+    out_i2c_buff[3] = (vibeFreq_r & 0xFF00) >> 8;
+    this->mtxi2c_.lock();
+    status = i2cPIC.sendData(out_i2c_buff, 4);
+    this->mtxi2c_.unlock();
 }
 
 void CASU_Interface::update_vibration_pattern()
 {
+    mtxSub_.lock();
     if (vibe_pattern_on)
     {
-        
-        timer_vp->expires_at(timer_vp->expires_at() + boost::posix_time::milliseconds(86400));
+        vibeFreq_r = vibe_freqs[vibe_pattern_idx];
+        vibeAmp_r = vibe_amps[vibe_pattern_idx];
+        timer_vp->expires_at(timer_vp->expires_at() + milliseconds(vibe_periods[vibe_pattern_idx]));
+        vibe_pattern_idx++;
+        if (vibe_pattern_idx >= vibe_freqs.size())
+        {
+            vibe_pattern_idx = 0;
+        }
     }
     else
     {
-        timer_vp->expires_at(timer_vp->expires_at() + boost::posix_time::seconds(86400));
+        
+        timer_vp->expires_at(timer_vp->expires_at() + seconds(1));
     }
+    mtxSub_.unlock();
+    // This call is a bit inelegant, becase set_vibration already
+    // has access to vibeFreq_r and vibeAmp_r
+    // Should reconsider the design of set_vibration
+    // Care should be taken to avoid possible deadlock/race conditions
+    set_vibration(vibeFreq_r, vibeAmp_r);
     timer_vp->async_wait(boost::bind(&CASU_Interface::update_vibration_pattern,this));
 }
 
