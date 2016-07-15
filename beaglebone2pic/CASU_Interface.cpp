@@ -819,7 +819,7 @@ void CASU_Interface::update_vibration_pattern()
     {
         vibeFreq_r = vibe_freqs[vibe_pattern_idx];
         vibeAmp_r = vibe_amps[vibe_pattern_idx];
-        timer_vp->expires_at(timer_vp->expires_at() + milliseconds(vibe_periods[vibe_pattern_idx]));
+        timer_vp->expires_from_now(milliseconds(vibe_periods[vibe_pattern_idx]));
         vibe_pattern_idx++;
         if (vibe_pattern_idx >= vibe_freqs.size())
         {
@@ -829,7 +829,7 @@ void CASU_Interface::update_vibration_pattern()
     else
     {
         
-        timer_vp->expires_at(timer_vp->expires_at() + seconds(1));
+        timer_vp->expires_from_now(seconds(1));
     }
     mtxSub_.unlock();
     // This call is a bit inelegant, becase set_vibration already
