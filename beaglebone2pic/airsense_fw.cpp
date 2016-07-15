@@ -16,6 +16,7 @@
 //#include <<inttypes.h>
 
 #define INIT_CMD "bzp05*"
+#define MEAS_CONT_CMD "bzr05*"
 #define MEAS_CMD "bzq*"
 #define STOP_CMD "bzk*"
 
@@ -99,14 +100,10 @@ int main(int argc, char **argv) {
     usleep(100000);
 
     // write command to init board
-    send_bytes = serial_port->writeBytes((unsigned char*) INIT_CMD, 6);
+    send_bytes = serial_port->writeBytes((unsigned char*) MEAS_CONT_CMD, 6);
     //std::cout << "Sent " << send_bytes << "bytes." << std::endl;
 
-    for (int i = 0; i<3; i++) {
-        usleep(200000);
-        serial_port->readBytes((uint8_t *)chr_buff, buff_size);
-        std::cout << chr_buff << std::endl;
-    }
+    usleep(10000);
 
     std::cout << "Entering while loop" << std::endl;
 
@@ -114,27 +111,26 @@ int main(int argc, char **argv) {
 
     while (1) {
         //write command to read measurement
-        send_bytes = serial_port->writeBytes((unsigned char*) MEAS_CMD, 4);
+        //send_bytes = serial_port->writeBytes((unsigned char*) MEAS_CMD, 4);
         //std::cout << "Sent " << send_bytes << "bytes." << std::endl;
         //read line
         //while (serial_port->availableBytes() <= 0) {
         //    std::cout << "Waiting for data " << std::endl;
         //    usleep(10000);
         //}
-        usleep(150000);
+       // usleep(150000);
         rec_var = serial_port->readBytes((uint8_t *)chr_buff, buff_size);
         chr_buff[rec_var] = '\0';
-        std::cout << chr_buff << std::endl;
-
         rec_var = sscanf(chr_buff, "%s %s %d %d %d %d %s", start, date_airsense,
                             &left_rms, &left_mean, &right_rms, &right_mean, end);
 
         if (rec_var == 7) {
-            std::cout << "Received 7 values " << left_rms << " "<< left_mean << " "<< right_rms << " "<< right_mean << std::endl;
+            //std::cout << "Received 7 values " << left_rms << " "<< left_mean << " "<< right_rms << " "<< right_mean << std::endl;
             //gettimeofday(&current_time, NULL);
+            std::cout << chr_buff << std::endl;
             struct timespec time_spec;
             clock_gettime(CLOCK_REALTIME, &time_spec);
-            std::cout << time_spec.tv_sec << std::endl;
+            //std::cout << time_spec.tv_sec << std::endl;
             time_sec = time_spec.tv_sec + time_spec.tv_nsec / 1000000000.0;
             //write line to log file
             sprintf(str_buff, "%.3f, %s, %d, %d, %d, %d\r\n", time_sec, date_airsense, left_rms, left_mean, right_rms, right_mean);
@@ -142,10 +138,10 @@ int main(int argc, char **argv) {
             log_file.flush();
         }
         else {
-            std::cout << "Received "<< rec_var <<"values "<<std::endl;
+            //std::cout << "Received "<< rec_var <<"values "<<std::endl;
         }
 
-        usleep(50000);
+        usleep(10000);
     }
 
     serial_port->writeBytes((unsigned char*) STOP_CMD, 4);
