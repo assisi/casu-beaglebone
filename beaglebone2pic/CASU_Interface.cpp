@@ -184,7 +184,7 @@ void CASU_Interface::i2cComm() {
 
         if (status <= 0) {
             cerr << "I2C initialization unsuccessful, exiting thread" << std::endl;
-            break;
+            usleep(100000);
         }
         else {
 
@@ -857,5 +857,5 @@ void CASU_Interface::periodic_jobs()
 }
 
 /* static */ const double CASU_Interface::VIBE_FREQ_MAX = 1500.0;
-/* static */ const unsigned CASU_Interface::VIBE_AMP_MAX = 100;
+/* static */ const unsigned CASU_Interface::VIBE_AMP_MAX = 50;
 /* static */ const unsigned CASU_Interface::VIBE_PATTERN_PERIOD_MIN = 100;

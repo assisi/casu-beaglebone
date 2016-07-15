@@ -21,12 +21,12 @@ int I2C_SlaveMCU::sendData(char *buff, int bytesNum) {
 	writeByte(i2cBusSaved, muxAddressSaved);
 	int status = -1;
 	int count = 0;
-	while (status < 0) {
+	while (status <= 0) {
 		status = writeBuff(buff, bytesNum);
 		count++;
-		if (count == 1000) {
+		if (count >= 10) {
 			cerr << "Waiting for outgoing data" << endl;
-			count = 0;
+			break;
 		}
 	}
 	return status;
@@ -36,12 +36,12 @@ int I2C_SlaveMCU::receiveData(char *buff, int bytesNum) {
 
 	int status = -1;
 	int count  = 0;
-	while (status < 0) {
+	while (status <= 0) {
 		status = readBuff(buff, bytesNum);
 		count++;
-		if (count == 1000) {
+		if (count >= 10) {
 			cerr << "Waiting for incoming data" << endl;
-			count = 0;
+			break;
 		}
 	}
 	return status;
