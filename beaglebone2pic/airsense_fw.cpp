@@ -68,6 +68,7 @@ int main(int argc, char **argv) {
     uint32_t right_mean;
     char date_airsense[50];
     std::string port, baud, log_file_name;
+    int status;	
 
 
     struct tm *time_struct;
@@ -82,6 +83,20 @@ int main(int argc, char **argv) {
 
     std::cout << argv[1] << std::endl;
 
+    //gettimeofday(&start_time, NULL);
+
+    serial_port = new Serial((char *)port.c_str(), atoi((char *)baud.c_str()));
+    status = serial_port->Open();
+    if (status == 1) {
+    	std::cout << "Opened serial port" << std::endl;
+    }
+    else {
+    	std::cout << "Failed to open serial port. Stopping program." << std::endl;
+	return 0;
+    }
+
+    usleep(100000);
+
     std::cout << "Opening log file" << std::endl;
 
     time_t t = time(NULL);
@@ -90,19 +105,10 @@ int main(int argc, char **argv) {
     std::cout << time_struct->tm_hour << " "<< time_struct->tm_min << " "<< time_struct->tm_sec<< std::endl;
     sprintf(str_buff, "%s_%d_%d_%d_%d_%0d.txt", log_file_name.c_str(), (int)time_struct->tm_year + 1900, (int)time_struct->tm_mon + 1, (int)time_struct->tm_mday, (int)time_struct->tm_hour, (int)time_struct->tm_min);
     log_file.open(str_buff, ios::out);
-    //gettimeofday(&start_time, NULL);
-
-    serial_port = new Serial((char *)port.c_str(), atoi((char *)baud.c_str()));
-    serial_port->Open();
-
-    std::cout << "Opened serial port" << std::endl;
-
-    usleep(100000);
 
     // write command to init board
     send_bytes = serial_port->writeBytes((unsigned char*) MEAS_CONT_CMD, 6);
-    //std::cout << "Sent " << send_bytes << "bytes." << std::endl;
-
+   
     usleep(10000);
 
     std::cout << "Entering while loop" << std::endl;
@@ -110,23 +116,13 @@ int main(int argc, char **argv) {
 
 
     while (1) {
-        //write command to read measurement
-        //send_bytes = serial_port->writeBytes((unsigned char*) MEAS_CMD, 4);
-        //std::cout << "Sent " << send_bytes << "bytes." << std::endl;
-        //read line
-        //while (serial_port->availableBytes() <= 0) {
-        //    std::cout << "Waiting for data " << std::endl;
-        //    usleep(10000);
-        //}
-       // usleep(150000);
+       
         rec_var = serial_port->readBytes((uint8_t *)chr_buff, buff_size);
         chr_buff[rec_var] = '\0';
         rec_var = sscanf(chr_buff, "%s %s %d %d %d %d %s", start, date_airsense,
                             &left_rms, &left_mean, &right_rms, &right_mean, end);
 
         if (rec_var == 7) {
-            //std::cout << "Received 7 values " << left_rms << " "<< left_mean << " "<< right_rms << " "<< right_mean << std::endl;
-            //gettimeofday(&current_time, NULL);
             std::cout << chr_buff << std::endl;
             struct timespec time_spec;
             clock_gettime(CLOCK_REALTIME, &time_spec);
