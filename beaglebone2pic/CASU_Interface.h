@@ -5,21 +5,29 @@
 #ifndef CASU_INTERFACE_H
 #define CASU_INTERFACE_H
 
-#include <stdio.h>
-#include <stdlib.h>
+#include <vector>
+#include <algorithm>
 #include <iostream>
-#include "i2cSlaveMCU.h"
-#include <boost/thread/mutex.hpp>
-#include <boost/interprocess/sync/named_mutex.hpp>
-#include <boost/interprocess/sync/scoped_lock.hpp>
-#include <zmq.hpp>
-#include "dev_msgs.pb.h"
-#include "zmq_helpers.hpp"
-#include "ehm.h"
-#include <time.h>
 #include <fstream>
 #include <sstream>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+#include <boost/thread/mutex.hpp>
+#include <boost/asio.hpp>
+#include <boost/scoped_ptr.hpp>
+//#include <boost/interprocess/sync/named_mutex.hpp>
+//#include <boost/interprocess/sync/scoped_lock.hpp>
+
+#include <zmq.hpp>
 #include <yaml-cpp/yaml.h>
+
+#include "i2cSlaveMCU.h"
+#include "zmq_helpers.hpp"
+#include "ehm.h"
+
+#include "base_msgs.pb.h"
 
 /*! Number of bytes (reference data) sent to CASU MCU through i2c communication.
  */
@@ -107,6 +115,19 @@ public:
 		MSG_REF_PROXY_ID = 6
 	};
 
+    /*! \brief Maximum vibration frequency */
+    static const double VIBE_FREQ_MAX;
+
+    /*! \brief Maximum vibration amplitude */
+    static const unsigned VIBE_AMP_MAX;
+
+    /*! \brief Minimm vibration pattern period, in milliseconds */
+    static const unsigned VIBE_PATTERN_PERIOD_MIN;
+
+    /*! Main CASU communication loop
+      Starts all communication and periodic job threads.
+    */
+    void run();
 
 	/*! Thread safe method that implements i2c communication with CASU MCU slave.
 	*/
@@ -126,7 +147,30 @@ public:
 	 */
     void zmqSub();
 
+    /*!
+      Method for controlling vibration amplitude and frequency
+     */
+    void set_vibration(double freq, double amp);
+
+    /*!
+      Method for stopping vibration.
+     */
+    void stop_vibration();
+
 private:
+
+    /*! Utiliy function for setting header timestamps 
+     */
+    void set_msg_header(AssisiMsg::Header* header);
+
+    /*! Function for handling periodic jobs
+     */
+    void periodic_jobs();
+    
+    /*! Function for updating the vibration pattern
+     */
+    //void update_vibration_pattern(const boost::system::error_code& e);
+    void update_vibration_pattern();
 
 	zmq::context_t *zmqContext; /*!< ZMQ context variable.  */
 	boost::mutex mtxPub_; /*!< Mutex used for locking outgoing data. */
@@ -135,7 +179,7 @@ private:
     I2C_Device mux;
 	I2C_SlaveMCU i2cPIC; /*!< Used for i2c communication with CASU MCU. */
 	
-EHM *ehm_device;	 /*!< Used for serial communication with electro-magnetic emitter control board. */
+    EHM *ehm_device;	 /*!< Used for serial communication with electro-magnetic emitter control board. */
 
 	char outBuff[20]; /*!< Buffer for i2c outgoing data.  */
     char inBuff[61]; /*!< Buffer for i2c incoming data. */
@@ -153,16 +197,24 @@ EHM *ehm_device;	 /*!< Used for serial communication with electro-magnetic emitt
 	int ctlPeltier_s; /*!< Latest PWM value (-100,100) set to Peltier device. */
     int airflow_s; /*!< Latest PWM value (0,100) set to the actuator producing airflow. */
     int fanCooler; /*!< Latest PWM value (0,100) set to the fan which cools the PCB and aluminium cooler. */
-	int vibeAmp_s; /*!< Latest reference value for speaker amplitude. */
-	int vibeFreq_s; /*!< Latest reference value for speaker frequency. */
-
 
 	float temp_ref; /*!< Actual reference value for CASU temperature. */
     float temp_ref_rec; /*!< Setted feference value for CASU temperature received from dsPIC. */
 	int ledDiag_r[3];  /*!< Actual reference values (RGB) for diagnostic LED. */
+
+	int vibeAmp_s; /*!< Latest reference value for speaker amplitude. */
+	int vibeFreq_s; /*!< Latest reference value for speaker frequency. */
 	int vibeAmp_r; /*!< Actual reference value for speaker amplitude. */
 	int vibeFreq_r; /*!< Actual reference value for speaker frequency. */
-	
+    bool vibration_on;
+
+    /* Vibration pattern parameters */
+    std::vector<unsigned> vibe_periods;
+    std::vector<float> vibe_freqs;
+    std::vector<unsigned> vibe_amps;
+    unsigned vibe_pattern_idx;
+	bool vibe_pattern_on;
+
     int airflow_r; /*!< Actual reference value for actuator producing airflow. */
 
     float Kp; /*!< Proportional gain of PI controller */
@@ -186,6 +238,15 @@ EHM *ehm_device;	 /*!< Used for serial communication with electro-magnetic emitt
     std::ofstream log_file; /*!< Data stream used for logging data in txt file. */
 	timeval start_time; /*!< Stores program start time and used for logging data. */
 
+    // Boost.Asio utilities for scheduling periodic jobs
+    boost::asio::io_service io;
+    boost::scoped_ptr<boost::asio::deadline_timer> timer_vp;
+
 };
 
+template <typename T>
+T clamp(const T& n, const T& lower, const T& upper)
+{
+    return std::max(lower, std::min(n, upper));
+}
 #endif
