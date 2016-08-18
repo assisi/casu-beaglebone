@@ -50,31 +50,27 @@ CASU_Interface::CASU_Interface(char *fbc_file)
     ledDiag_r[L_G] = 0;
     ledDiag_r[L_B] = 0;
 
-    irRawVals[IR_F] = 0;
-    irRawVals[IR_FR] = 0;
-    irRawVals[IR_BR] = 0;
-    irRawVals[IR_B] = 0;
-    irRawVals[IR_BL] = 0;
-    irRawVals[IR_FL] = 0;
+    // Initialize raw IR reading values
+    for (int i = 0; i <= IR_FR; i++)
+    {
+        irRawVals[i] = 0;
+    }
 
-    temp[0] = 0.0;
-    temp[1] = 0.0;
-    temp[2] = 0.0;
-    temp[3] = 0.0;
-    temp[4] = 0.0;
-    temp[5] = 0.0;
-    tempWax = -1;
-    tempCasu = -1;
+    // Initialize Temp reading and estimate values
+    for (int i = 0; i <= T_WAX; i++)
+    {
+        temp[i] = 0.0;
+    }
+    // TODO: next two lines are probably obsolete
+    // remove them next time
+    //temp[T_RING] = -1;
+    //temp[T_WAX] = -1;
 
-    vAmp[0] = 0.0;
-    vAmp[1] = 0.0;
-    vAmp[2] = 0.0;
-    vAmp[3] = 0.0;
-
-    vFreq[0] = 0.0;
-    vFreq[1] = 0.0;
-    vFreq[2] = 0.0;
-    vFreq[3] = 0.0;
+    for (int i = 0; i <= A_R; i++)
+    {
+        vAmp[i] = 0.0;
+        vFreq[i] = 0.0;
+    }
 
     vibeAmp_r = 0;
     vibeFreq_r = 1;
@@ -106,40 +102,6 @@ CASU_Interface::CASU_Interface(char *fbc_file)
     // Default period for checking for vibration pattern setpoints
     // is 1 second.
     timer_vp.reset(new deadline_timer(io, seconds(1))); 
-/*
-    char out_i2c_buff[20];
-    // send initial references
-    out_i2c_buff[0] = MSG_REF_VIBE_ID;
-    out_i2c_buff[1] =  vibeAmp_r;
-    out_i2c_buff[2] = vibeFreq_r & 0x00FF;
-    out_i2c_buff[3] = (vibeFreq_r & 0xFF00) >> 8;
-    this->mtxi2c_.lock();
-    status = i2cPIC.sendData(out_i2c_buff, 4);
-    this->mtxi2c_.unlock();
-    usleep(1000);
-
-    out_i2c_buff[0] = MSG_REF_TEMP_ID;
-    int tmp = temp_ref * 10;
-    if (tmp < 0) tmp = tmp + 65536;
-    out_i2c_buff[1] = (tmp & 0x00FF);   
-    out_i2c_buff[2] = (tmp & 0xFF00) >> 8;
-    this->mtxi2c_.lock();
-    status = i2cPIC.sendData(out_i2c_buff, 3);
-    this->mtxi2c_.unlock();
-    usleep(1000);
-
-    out_i2c_buff[0] = MSG_REF_LED_ID;
-    out_i2c_buff[1] =  ledDiag_r[0];
-    out_i2c_buff[2] =  ledDiag_r[1];
-    out_i2c_buff[3] =  ledDiag_r[2];
-    this->mtxi2c_.lock();
-    status = i2cPIC.sendData(out_i2c_buff, 4);
-    this->mtxi2c_.unlock();
-    usleep(1000);
-
-*/
-
-
 
 }
 
@@ -217,9 +179,9 @@ void CASU_Interface::i2cComm() {
 
             dummy = inBuff[8] | (inBuff[9] << 8);
             if (dummy > 32767)
-                temp[T_flexPCB] = (dummy - 65536.0) / 10.0;
+                temp[T_TOP] = (dummy - 65536.0) / 10.0;
             else
-                temp[T_flexPCB] = dummy / 10.0;
+                temp[T_TOP] = dummy / 10.0;
 
             dummy = inBuff[10] | (inBuff[11] << 8);
             if (dummy > 32767)
@@ -229,15 +191,15 @@ void CASU_Interface::i2cComm() {
 
             dummy = inBuff[12] | (inBuff[13] << 8);
             if (dummy > 32767)
-                tempCasu= (dummy - 65536.0) / 10.0;
+                temp[T_RING]= (dummy - 65536.0) / 10.0;
             else
-                tempCasu = dummy / 10.0;
+                temp[T_RING] = dummy / 10.0;
 
             dummy = inBuff[14] | (inBuff[15] << 8);
             if (dummy > 32767)
-                tempWax = (dummy - 65536.0) / 10.0;
+                temp[T_WAX] = (dummy - 65536.0) / 10.0;
             else
-                tempWax = dummy / 10.0;
+                temp[T_WAX] = dummy / 10.0;
 
             dummy = inBuff[16] | (inBuff[17] << 8);
             if (dummy > 32767)
@@ -279,10 +241,10 @@ void CASU_Interface::i2cComm() {
             gettimeofday(&current_time, NULL);
             t_msec = (current_time.tv_sec - start_time.tv_sec) * 1000 + (current_time.tv_usec - start_time.tv_usec)/1000;
             //printf("I2C data processing time stamp %.3f \n", t_msec);
-            sprintf(str_buff, "%.2f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %d %d %d %d %d %d %d %d %d %d %d \n",
-                    t_msec / 1000, temp[T_F], temp[T_R], temp[T_B], temp[T_L], temp[T_PCB], temp[T_flexPCB], tempCasu, tempWax, temp_ref_rec,
+            sprintf(str_buff, "%.2f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %d %d %d %d %d %d %d %d %d %d %d \n",
+                    t_msec / 1000, temp[T_F], temp[T_L], temp[T_B], temp[T_R], temp[T_TOP], temp[T_PCB], temp[T_PCB], temp[T_RING], temp[T_WAX], temp_ref_rec,
                     ctlPeltier_s, vibeAmp_s, vibeFreq_s, airflow_r, fanCooler,
-                    irRawVals[IR_F], irRawVals[IR_FR], irRawVals[IR_BR], irRawVals[IR_B], irRawVals[IR_BL], irRawVals[IR_FL]);
+                    irRawVals[IR_F], irRawVals[IR_FL], irRawVals[IR_BL], irRawVals[IR_B], irRawVals[IR_BR], irRawVals[IR_FR]);
             log_file.write(str_buff, strlen(str_buff));
             log_file.flush();
             //gettimeofday(&current_time, NULL);
@@ -290,19 +252,18 @@ void CASU_Interface::i2cComm() {
             //printf("I2C flashin to file time stamp %.3f \n", t_msec);
             print_counter++;
             if (print_counter == 13) {
-                printf("temp F R B L PCB TOP = ");
-                for (int i = 0; i < 6; i++) {
+                printf("temp F L B R TOP PCB RING WAX ref= ");
+                for (int i = 0; i < 8; i++) {
                     printf("%.1f ", temp[i]);
                 }
-                printf("\n");
-                printf("temp Casu Wax Ref = %.1f %.1f %.1f\n", tempCasu, tempWax, temp_ref_rec);
+                printf("%.1f\n", temp_ref_rec);
 
                 printf("vibeAmp meas ref = %.1f %d", vAmp[0], vibeAmp_s);
                 printf("\n");
                 printf("vibeFreq meas ref = %.1f %d", vFreq[0], vibeFreq_s);
                 printf("\n");
 
-                printf("ir raw = ");
+                printf("ir raw F FL BL B BR FR = ");
                 for (int i = 0; i < 6; i++) {
                     printf("%d ", irRawVals[i]);
                 }
@@ -371,13 +332,13 @@ void CASU_Interface::zmqPub() {
     int temp_clock = 0;
     std::string data;
     AssisiMsg::RangeArray ranges;
-    for(int i = 0; i < 7; i++) {
+    for(int i = 0; i <= IR_FR; i++) {
         ranges.add_range(0);
         ranges.add_raw_value(0);
     }
     AssisiMsg::TemperatureArray temps;
 
-    for(int i = 0; i < 8; i++) {
+    for(int i = 0; i <= T_WAX; i++) {
         temps.add_temp(0);
     }
 
@@ -388,7 +349,7 @@ void CASU_Interface::zmqPub() {
 
         /* Proximity sensor values */
         this->mtxPub_.lock();
-        for(int i = 0; i < 7; i++) {
+        for(int i = 0; i <= IR_FR; i++) {
             if (irRawVals[i] > proxyThresh)
                 range = 1;
             else
@@ -411,11 +372,9 @@ void CASU_Interface::zmqPub() {
         if (temp_clock == 10) {
             // Temperature is published 4 times less often
             this->mtxPub_.lock();
-            for(int i = 0; i < 6; i++) {
+            for(int i = 0; i <= T_WAX; i++) {
                 temps.set_temp(i, temp[i]);
             }
-            temps.set_temp(6, tempCasu);
-            temps.set_temp(7, tempWax);
             this->mtxPub_.unlock();
             clock_gettime(CLOCK_REALTIME, &actual_time);
             temps.mutable_header()->mutable_stamp()->set_sec(actual_time.tv_sec);

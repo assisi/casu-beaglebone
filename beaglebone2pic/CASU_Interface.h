@@ -67,23 +67,24 @@ public:
 	 */
 	enum IR_ID {
 		IR_F = 0,  /*!< IR sensor on forward CASU side */
-		IR_FR = 1, /*!< IR sensor on forward-right CASU side  */
-		IR_BR = 2, /*!< IR sensor on back-right CASU side */
+		IR_FL = 1, /*!< IR sensor on forward-left CASU side */
+		IR_BL = 2, /*!< IR sensor on back-left CASU side */
 		IR_B = 3,  /*!< IR sensor on back CASU side */
-		IR_BL = 4, /*!< IR sensor on back-left CASU side */
-		IR_FL = 5, /*!< IR sensor on forward-left CASU side */
-		IR_T = 6   /*!< IR sensor on top CASU side */
+		IR_BR = 4, /*!< IR sensor on back-right CASU side */
+		IR_FR = 5, /*!< IR sensor on forward-right CASU side  */
 	};	
 
 	/*! \brief Used for enumerating CASU temperature sensors.
 	 */
 	enum T_ID {
 		T_F = 0, /*!< Temperature sensor on forward CASU side */
-		T_R = 1, /*!< Temperature sensor on right CASU side */
+		T_L = 1, /*!< Temperature sensor on left CASU side */
 		T_B = 2, /*!< Temperature sensor on back CASU side */
-		T_L = 3, /*!< Temperature sensor on left CASU side */
-        T_flexPCB = 5,  /*!< Temperature sensor on flex PCB */
-        T_PCB = 4 /*!< Temperature sensor on main pcb */
+		T_R = 3, /*!< Temperature sensor on right CASU side */
+        T_TOP = 4,  /*!< Top temperature sensor (on flex PCB) */
+        T_PCB = 5, /*!< Temperature sensor on main PCB */
+        T_RING = 6, /*!< Estimated ring temperature (just the average of T_F, T_L, T_B, T_R?) */
+        T_WAX = 7 /*!< Estimated wax temeperature */
 
 	};
 
@@ -91,9 +92,9 @@ public:
 	 */
 	enum ACC_ID {
 		A_F = 0, /*!< Accelerometer sensor on forward CASU side */
-		A_R = 1, /*!< Accelerometer sensor on right CASU side */
+		A_L = 1, /*!< Accelerometer sensor on left CASU side */
 		A_B = 2, /*!< Accelerometer sensor on back CASU side */
-		A_L = 3, /*!< Accelerometer sensor on left CASU side */
+		A_R = 3, /*!< Accelerometer sensor on right CASU side */
 	};
 
 	/*! \brief Used for enumerating light-emitting diode (LED) components
@@ -187,9 +188,7 @@ private:
 	char status; /*!< Status variable. */
     int calRec; /*!< Status variable for receive notification of calibration data. 1 - data received, 0 - data not yet received */
     int calSend; /*!< Status variable for sending calibration data. 1 - data sent, 0 - data not yet sent */
-	float temp[6]; /*!< Array containing latest temperature values from five sensors. */
-    float tempWax; /*!< Estimated wax temperature. */
-    float tempCasu; /*!< Estimated casu ring temperature. */
+	float temp[8]; /*!< Array containing latest temperature values 6 sensors + two estimated temperatures. */
 	float vAmp[4]; /*!< Array containing latest vibration amplitude values from four sensors. */
 	float vFreq[4]; /*!< Array containing latest vibration frequency values from four sensors. */
 	int irRawVals[6]; /*!< Array containing latest infra-red proximity values from seven sensors. */
