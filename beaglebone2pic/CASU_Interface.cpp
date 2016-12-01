@@ -134,7 +134,7 @@ void CASU_Interface::i2cComm() {
     gettimeofday(&start_time, NULL);
     double t_msec;
     timeval current_time;
-    sprintf(str_buff, "time temp_f temp_r temp_b temp_l temp_pcb temp_top temp_casu temp_wax temp_ref pelt vibeAmp_s vibeFreq_s airfolow_s fanCool \
+    sprintf(str_buff, "time temp_f temp_r temp_b temp_l temp_top temp_pcb temp_casu temp_wax temp_ref pelt vibeAmp_s vibeFreq_s airfolow_s fanCool \
             proxi_f proxi_fr proxi_br proxi_b proxi_bl proxi_fl flag_error flag_count\n");
     log_file.write(str_buff, strlen(str_buff));
     log_file.flush();
