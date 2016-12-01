@@ -41,6 +41,11 @@
  */
 #define IN_DATA_NUM 55
 
+#define IN_DATA_NUM_SLOW 55
+#define IN_DATA_NUM_FAST 36
+#define IN_DATA_NUM_ACC 256
+
+#define I2C_COMM_LOOP_TIME 30.0
 
 /*! \brief Implements communication with CASU microcontroller (MCU), communication with a user code (CASU controller) and data logging.
  *
@@ -108,12 +113,14 @@ public:
 	/*! \brief Out messages id.
 	 */
 	enum MSG_OUT_ID {
-		MSG_RESET_ID = 1, /*!< Reset msg id */
+		MSG_RESET_OUT_CAL_DATA_NUMID = 1, /*!< Reset msg id */
 		MSG_CAL_ID = 2,   /*!< Msg cal id */
 		MSG_REF_VIBE_ID = 3, /*!< Vibration red id */
 		MSG_REF_LED_ID = 4,  /*!< LED ref id */
 		MSG_REF_TEMP_ID = 5,  /*!< Temp ref id */
-		MSG_REF_PROXY_ID = 6
+		MSG_REF_PROXY_ID = 6,
+		MSG_MEASUREMENT_FAST_ID = 11, /*!< Request sensor and reference reading EXCEPT temperature */
+		MSG_MEASUREMENT_SLOW_ID = 12 /*!< Request sensor and reference reading for all */
 	};
 
     /*! \brief Maximum vibration frequency */
@@ -223,7 +230,8 @@ private:
     float Kf3; /*!< Weight of old output value of discrete PT1 filter for wax temperature */
     int tempCtlOn; /*!< Temperature control on/off flag */
     int fanCtlOn;  /*!< Fan control on/off flag */
-
+	int i2c_connector;
+	
     std::string pub_addr; /*!< Address for publising zmq messages */
     std::string sub_addr; /*!< Address for subscribing to zmq messages */
     std::string pub_addr_af;
@@ -240,6 +248,10 @@ private:
     // Boost.Asio utilities for scheduling periodic jobs
     boost::asio::io_service io;
     boost::scoped_ptr<boost::asio::deadline_timer> timer_vp;
+
+    struct timeval tLoopStart, tLoopCurrent;
+    struct timeval tOutputStart, tOutputCurrent;
+    double elapsedTime;
 
 };
 

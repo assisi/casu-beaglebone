@@ -20,6 +20,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <sys/file.h>
 
 /*! \brief Implements i2c communication of a Linux based computer and a generic i2c device.
  *
@@ -61,7 +62,16 @@ public:
 	 * 		   -1 - failed to initialize communication with the i2c slave device \n
 	 * 		   -2 - failed to write byte to the i2c slave device
 	 */
-	int writeByte(char regAddress, char data);
+
+
+	int openBus();
+	/*! \brief Method opens i2c communication bus on device
+	 *
+	 * @return	non-negative - file descriptor			
+	 *			-1 - failed to open i2c bus
+	 */
+
+	int writeByte(char regAddress, char data, int file);
 
 	/*! \brief Method writes bytes to the given register of an i2c device.
 	 *
@@ -73,7 +83,7 @@ public:
 	 * 		   -1 - failed to initialize communication with the i2c slave device \n
 	 * 		   -2 - failed to write byte to the i2c slave device
 	 */
-	int writeBytes(char regAddress, char *buff, int bytesNum);
+	int writeBytes(char regAddress, char *buff, int bytesNum, int file);
 
 	/*! \brief Method reads byte from the given register of an i2c device.
 	 *
@@ -85,7 +95,7 @@ public:
 	 * 		   -2 - failed to write byte to the i2c slave device (register address) \n
 	 * 		   -3 - failed to read byte from the i2c slave device
 	 */
-	int readByte(char regAddress, char *data);
+	int readByte(char regAddress, char *data, int file);
 
 	/*! \brief Method reads bytes from the given register of an i2c device.
 	 *
@@ -98,7 +108,7 @@ public:
 	 * 		   -2 - failed to write byte to the i2c slave device (register address) \n
 	 *		   -3 - failed to read bytes from the i2c slave device
 	 */
-	int readBytes(char regAddress, char *buff, int bytesNum);
+	int readBytes(char regAddress, char *buff, int bytesNum, int file);
 
 	/*! \brief Method writes bytes to an i2c device without using register address.
 	 *
@@ -109,7 +119,7 @@ public:
 	 * 		   -1 - failed to initialize communication with the i2c slave device \n
 	 * 		   -2 - failed to write byte to the i2c slave device
 	 */
-	int writeBuff(char *buff, int bytesNum);
+	int writeBuff(char *buff, int bytesNum, int file);
 
 	/*! \brief Method reads bytes from an i2c device without using register address.
 	 *
@@ -120,7 +130,7 @@ public:
 	 * 		   -1 - failed to initialize communication with the i2c slave device \n
 	 * 		   -3 - failed to read bytes from the i2c slave device
 	 */
-	int readBuff(char *buff, int bytesNum);
+	int readBuff(char *buff, int bytesNum, int file);
 
 	int i2cBus; /*!< Number of an i2c bus, e.g. 1 translates to the file /dev/i2c-1 */
 	int i2cAddress; /*!< Address of an i2c device */

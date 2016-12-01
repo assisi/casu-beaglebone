@@ -34,6 +34,7 @@ CASU_Interface::CASU_Interface(char *fbc_file)
     i2c_bus = fbc["i2c_bus"].as<int>();
     picAddress = fbc["i2c_addr"].as<int>();
     tempCtlOn = fbc["tempCtlOn"].as<int>();
+    i2c_connector = fbc["i2c_connector"].as<int>();
     Kp = fbc["Kp"].as<float>();
     Ki = fbc["Ki"].as<float>();
     Kf1 = fbc["Kf1"].as<float>();
@@ -41,10 +42,10 @@ CASU_Interface::CASU_Interface(char *fbc_file)
     Kf3 = fbc["Kf3"].as<float>();
     fanCtlOn = fbc["fanCtlOn"].as<int>();
 
-    mux.initI2C(2, 112);
-    mux.writeByte(0, 0xFF);
+    //mux.initI2C(2, 112);
+    //mux.writeByte(0, 0xFF);
     
-    i2cPIC.initI2C(i2c_bus, picAddress);
+    i2cPIC.initI2C(i2c_bus, picAddress, i2c_connector);
     zmqContext = new zmq::context_t(3);
     ledDiag_r[L_R] = 0;
     ledDiag_r[L_G] = 0;
@@ -115,143 +116,146 @@ CASU_Interface::~CASU_Interface() {
 
 void CASU_Interface::run()
 {
-	boost::thread_group threads;
+    boost::thread_group threads;
     threads.create_thread(boost::bind(&CASU_Interface::periodic_jobs, this));
-	threads.create_thread(boost::bind(&CASU_Interface::i2cComm, this));
+    threads.create_thread(boost::bind(&CASU_Interface::i2cComm, this));
     threads.create_thread(boost::bind(&CASU_Interface::zmqPub, this));
     threads.create_thread(boost::bind(&CASU_Interface::zmqSub, this));
-	threads.join_all();
+    threads.join_all();
 }
 
 void CASU_Interface::i2cComm() {
         //boost::interprocess::named_mutex i2cMuxLock(boost::interprocess::open_or_create, "i2cMuxLock" );
         //i2cMuxLock.unlock();
-	int print_counter = 0 ;
-	char str_buff[256] = {0};
-	std::stringstream ss;
-	gettimeofday(&start_time, NULL);
-	double t_msec;
-	timeval current_time;
+    int print_counter = 0;
+    char str_buff[256] = {0};
+    char msg_request_code[1] = {0};
+    std::stringstream ss;
+    gettimeofday(&start_time, NULL);
+    double t_msec;
+    timeval current_time;
     sprintf(str_buff, "time temp_f temp_r temp_b temp_l temp_pcb temp_top temp_casu temp_wax temp_ref pelt vibeAmp_s vibeFreq_s airfolow_s fanCool \
-            proxi_f proxi_fr proxi_br proxi_b proxi_bl proxi_fl \n");
+            proxi_f proxi_fr proxi_br proxi_b proxi_bl proxi_fl flag_error flag_count\n");
     log_file.write(str_buff, strlen(str_buff));
     log_file.flush();
 
+    gettimeofday(&tOutputStart, NULL);
+    
+    // First loop slow to get temperature values
+    int flag_first_loop_run = 1;
+
     while(1) {
+        gettimeofday(&tLoopStart, NULL);
 
-                       
-        this->mtxi2c_.lock();
-        status = i2cPIC.receiveData(inBuff, IN_DATA_NUM);
-        this->mtxi2c_.unlock();
+        // Print output every 1s; slow msg
+        gettimeofday(&tOutputCurrent, NULL);
+        elapsedTime = (tOutputCurrent.tv_sec - tOutputStart.tv_sec) * 1000.0;      // sec to ms
+        elapsedTime += (tOutputCurrent.tv_usec - tOutputStart.tv_usec) / 1000.0;   // us to ms
+        if ((elapsedTime > 1000) || (flag_first_loop_run == 1)) {
 
-        if (status <= 0) {
-            cerr << "I2C initialization unsuccessful, exiting thread" << std::endl;
-            usleep(100000);
-        }
-        else {
+            //if (flag_first_loop_run == 1) cout << " first loop run!!!! " << std::endl; 
+            flag_first_loop_run = 0;
+            // Request large message
+            msg_request_code[0] = MSG_MEASUREMENT_SLOW_ID;
+            this->mtxi2c_.lock();
+            status = i2cPIC.sendData(msg_request_code, 2);
+            this->mtxi2c_.unlock();
 
-            //cout << "Read bytes: " << IN_DATA_NUM << std::endl;
+            this->mtxi2c_.lock();
+            status = i2cPIC.receiveData(inBuff, IN_DATA_NUM_SLOW);
+            this->mtxi2c_.unlock();
 
-            this->mtxPub_.lock();
-            dummy = inBuff[0] | (inBuff[1] << 8);
-            if (dummy > 32767)
-                temp[T_F] = (dummy - 65536.0) / 10.0;
-            else
-                temp[T_F] = dummy / 10.0;
+            if (status <= 0) {
+                cerr << "I2C initialization unsuccessful, exiting thread" << std::endl;
+            }
+            else {
+                //cout << "Read bytes: " << IN_DATA_NUM << std::endl;
+                this->mtxPub_.lock();
+                dummy = inBuff[0] | (inBuff[1] << 8);
+                if (dummy > 32767)
+                    temp[T_F] = (dummy - 65536.0) / 10.0;
+                else
+                    temp[T_F] = dummy / 10.0;
 
-            dummy = inBuff[2] | (inBuff[3] << 8);
-            if (dummy > 32767)
-                temp[T_R] = (dummy - 65536.0) / 10.0;
-            else
-                temp[T_R] = dummy / 10.0;
+                dummy = inBuff[2] | (inBuff[3] << 8);
+                if (dummy > 32767)
+                    temp[T_R] = (dummy - 65536.0) / 10.0;
+                else
+                    temp[T_R] = dummy / 10.0;
 
-            dummy = inBuff[4] | (inBuff[5] << 8);
-            if (dummy > 32767)
-                temp[T_B] = (dummy - 65536.0) / 10.0;
-            else
-                temp[T_B] = dummy / 10.0;
+                dummy = inBuff[4] | (inBuff[5] << 8);
+                if (dummy > 32767)
+                    temp[T_B] = (dummy - 65536.0) / 10.0;
+                else
+                    temp[T_B] = dummy / 10.0;
 
-            dummy = inBuff[6] | (inBuff[7] << 8);
-            if (dummy > 32767)
-                temp[T_L] = (dummy - 65536.0) / 10.0;
-            else
-                temp[T_L] = dummy / 10.0;
+                dummy = inBuff[6] | (inBuff[7] << 8);
+                if (dummy > 32767)
+                    temp[T_L] = (dummy - 65536.0) / 10.0;
+                else
+                    temp[T_L] = dummy / 10.0;
 
-            dummy = inBuff[8] | (inBuff[9] << 8);
-            if (dummy > 32767)
-                temp[T_TOP] = (dummy - 65536.0) / 10.0;
-            else
-                temp[T_TOP] = dummy / 10.0;
+                dummy = inBuff[8] | (inBuff[9] << 8);
+                if (dummy > 32767)
+                    temp[T_TOP] = (dummy - 65536.0) / 10.0;
+                else
+                    temp[T_TOP] = dummy / 10.0;
 
-            dummy = inBuff[10] | (inBuff[11] << 8);
-            if (dummy > 32767)
-                temp[T_PCB] = (dummy - 65536.0) / 10.0;
-            else
-                temp[T_PCB] = dummy / 10.0;
+                dummy = inBuff[10] | (inBuff[11] << 8);
+                if (dummy > 32767)
+                    temp[T_PCB] = (dummy - 65536.0) / 10.0;
+                else
+                    temp[T_PCB] = dummy / 10.0;
 
-            dummy = inBuff[12] | (inBuff[13] << 8);
-            if (dummy > 32767)
-                temp[T_RING]= (dummy - 65536.0) / 10.0;
-            else
-                temp[T_RING] = dummy / 10.0;
+                dummy = inBuff[12] | (inBuff[13] << 8);
+                if (dummy > 32767)
+                    temp[T_RING]= (dummy - 65536.0) / 10.0;
+                else
+                    temp[T_RING] = dummy / 10.0;
 
-            dummy = inBuff[14] | (inBuff[15] << 8);
-            if (dummy > 32767)
-                temp[T_WAX] = (dummy - 65536.0) / 10.0;
-            else
-                temp[T_WAX] = dummy / 10.0;
+                dummy = inBuff[14] | (inBuff[15] << 8);
+                if (dummy > 32767)
+                    temp[T_WAX] = (dummy - 65536.0) / 10.0;
+                else
+                    temp[T_WAX] = dummy / 10.0;
 
-            dummy = inBuff[16] | (inBuff[17] << 8);
-            if (dummy > 32767)
-                temp_ref_rec = (dummy - 65536.0) / 10.0;
-            else
-                temp_ref_rec = dummy / 10.0;
+                dummy = inBuff[16] | (inBuff[17] << 8);
+                if (dummy > 32767)
+                    temp_ref_rec = (dummy - 65536.0) / 10.0;
+                else
+                    temp_ref_rec = dummy / 10.0;
 
-            vAmp[A_F] = (inBuff[18] | (inBuff[19] << 8)) / 10.0;
-            vAmp[A_R] = (inBuff[20] | (inBuff[21] << 8)) / 10.0;
-            vAmp[A_B] = (inBuff[22] | (inBuff[23] << 8)) / 10.0;
-            vAmp[A_L] = (inBuff[24] | (inBuff[25] << 8)) / 10.0;
+                vAmp[A_F] = (inBuff[18] | (inBuff[19] << 8)) / 10.0;
+                vAmp[A_R] = (inBuff[20] | (inBuff[21] << 8)) / 10.0;
+                vAmp[A_B] = (inBuff[22] | (inBuff[23] << 8)) / 10.0;
+                vAmp[A_L] = (inBuff[24] | (inBuff[25] << 8)) / 10.0;
 
-            vFreq[A_F] = (inBuff[26] | (inBuff[27] << 8)) / 10.0;
-            vFreq[A_R] = (inBuff[28] | (inBuff[29] << 8)) / 10.0;
-            vFreq[A_B] = (inBuff[30] | (inBuff[31] << 8)) / 10.0;
-            vFreq[A_L] = (inBuff[32] | (inBuff[33] << 8)) / 10.0;
+                vFreq[A_F] = (inBuff[26] | (inBuff[27] << 8));
+                vFreq[A_R] = (inBuff[28] | (inBuff[29] << 8)) / 10.0;
+                vFreq[A_B] = (inBuff[30] | (inBuff[31] << 8)) / 10.0;
+                vFreq[A_L] = (inBuff[32] | (inBuff[33] << 8)) / 10.0;
 
-            vibeAmp_s = inBuff[34];
-            vibeFreq_s = inBuff[35] | (inBuff[36] << 8);
+                vibeAmp_s = inBuff[34];
+                vibeFreq_s = inBuff[35] | (inBuff[36] << 8);
 
-            irRawVals[IR_F] = inBuff[37] | (inBuff[38] << 8);
-            irRawVals[IR_FR] = inBuff[39] | (inBuff[40] << 8);
-            irRawVals[IR_BR] = inBuff[41] | (inBuff[42] << 8);
-            irRawVals[IR_B] = inBuff[43] | (inBuff[44] << 8);
-            irRawVals[IR_BL] = inBuff[45] | (inBuff[46] << 8);
-            irRawVals[IR_FL] = inBuff[47] | (inBuff[48] << 8);
+                irRawVals[IR_F] = inBuff[37] | (inBuff[38] << 8);
+                irRawVals[IR_FR] = inBuff[39] | (inBuff[40] << 8);
+                irRawVals[IR_BR] = inBuff[41] | (inBuff[42] << 8);
+                irRawVals[IR_B] = inBuff[43] | (inBuff[44] << 8);
+                irRawVals[IR_BL] = inBuff[45] | (inBuff[46] << 8);
+                irRawVals[IR_FL] = inBuff[47] | (inBuff[48] << 8);
 
-            ctlPeltier_s = inBuff[49];
-            if (ctlPeltier_s > 100) ctlPeltier_s = ctlPeltier_s - 201;
+                ctlPeltier_s = inBuff[49];
+                if (ctlPeltier_s > 100) ctlPeltier_s = ctlPeltier_s - 201;
 
-            ledDiag_s[L_R] = inBuff[50];
-            ledDiag_s[L_G] = inBuff[51];
-            ledDiag_s[L_B] = inBuff[52];
+                ledDiag_s[L_R] = inBuff[50];
+                ledDiag_s[L_G] = inBuff[51];
+                ledDiag_s[L_B] = inBuff[52];
 
-            fanCooler = inBuff[53];
-            calRec = inBuff[54];
+                fanCooler = inBuff[53];
+                calRec = inBuff[54];
+                this->mtxPub_.unlock();
 
-            this->mtxPub_.unlock();
-            gettimeofday(&current_time, NULL);
-            t_msec = (current_time.tv_sec - start_time.tv_sec) * 1000 + (current_time.tv_usec - start_time.tv_usec)/1000;
-            //printf("I2C data processing time stamp %.3f \n", t_msec);
-            sprintf(str_buff, "%.2f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %d %d %d %d %d %d %d %d %d %d %d \n",
-                    t_msec / 1000, temp[T_F], temp[T_L], temp[T_B], temp[T_R], temp[T_TOP], temp[T_PCB], temp[T_PCB], temp[T_RING], temp[T_WAX], temp_ref_rec,
-                    ctlPeltier_s, vibeAmp_s, vibeFreq_s, airflow_r, fanCooler,
-                    irRawVals[IR_F], irRawVals[IR_FL], irRawVals[IR_BL], irRawVals[IR_B], irRawVals[IR_BR], irRawVals[IR_FR]);
-            log_file.write(str_buff, strlen(str_buff));
-            log_file.flush();
-            //gettimeofday(&current_time, NULL);
-            //t_msec = (current_time.tv_sec - start_time.tv_sec) * 1000 + (current_time.tv_usec - start_time.tv_usec)/1000;
-            //printf("I2C flashin to file time stamp %.3f \n", t_msec);
-            print_counter++;
-            if (print_counter == 13) {
                 printf("temp F L B R TOP PCB RING WAX ref= ");
                 for (int i = 0; i < 8; i++) {
                     printf("%.1f ", temp[i]);
@@ -279,11 +283,73 @@ void CASU_Interface::i2cComm() {
 
                 printf("calibration data rec = %d \n", calRec);
                 printf("_________________________________________________________________\n\n");
-                print_counter = 0;
+                
+                gettimeofday(&tOutputStart, NULL);
             }
         }
-        usleep(40000); // total loop time 40 + 10 sec (execution of the above code) = 50 sec
+        else {
+
+            // Request smaller message
+            msg_request_code[0] = MSG_MEASUREMENT_FAST_ID;
+            this->mtxi2c_.lock();
+            status = i2cPIC.sendData(msg_request_code, 2);
+            this->mtxi2c_.unlock();
+
+            this->mtxi2c_.lock();
+            status = i2cPIC.receiveData(inBuff, IN_DATA_NUM_FAST);
+            this->mtxi2c_.unlock();
+
+            if (status <= 0) {
+                cerr << "I2C initialization unsuccessful, exiting thread" << std::endl;
+            }
+            else {
+                //cout << "Read bytes: " << IN_DATA_NUM_FAST << std::endl;
+                
+                this->mtxPub_.lock();
+
+                vAmp[A_F] = (inBuff[0] | (inBuff[1] << 8)) / 10.0;
+                vAmp[A_R] = (inBuff[2] | (inBuff[3] << 8)) / 10.0;
+                vAmp[A_B] = (inBuff[4] | (inBuff[5] << 8)) / 10.0;
+                vAmp[A_L] = (inBuff[6] | (inBuff[7] << 8)) / 10.0;
+
+    //            vFreq[A_F] = (inBuff[26] | (inBuff[27] << 8)) / 10.0;
+    //            vFreq[A_R] = (inBuff[28] | (inBuff[29] << 8)) / 10.0;
+                vFreq[A_F] = (inBuff[8] | (inBuff[9] << 8)) / 10.0;
+                vFreq[A_R] = (inBuff[10] | (inBuff[11] << 8)) / 10.0;
+                vFreq[A_B] = (inBuff[12] | (inBuff[13] << 8)) / 10.0;
+                vFreq[A_L] = (inBuff[14] | (inBuff[15] << 8)) / 10.0;;
+
+                vibeAmp_s = inBuff[16];
+                vibeFreq_s = inBuff[17] | (inBuff[18] << 8);
+
+                irRawVals[IR_F] = inBuff[19] | (inBuff[20] << 8);
+                irRawVals[IR_FR] = inBuff[21] | (inBuff[22] << 8);
+                irRawVals[IR_BR] = inBuff[23] | (inBuff[24] << 8);
+                irRawVals[IR_B] = inBuff[25] | (inBuff[26] << 8);
+                irRawVals[IR_BL] = inBuff[27] | (inBuff[28] << 8);
+                irRawVals[IR_FL] = inBuff[29] | (inBuff[30] << 8);
+
+                ledDiag_s[L_R] = inBuff[31];
+                ledDiag_s[L_G] = inBuff[32];
+                ledDiag_s[L_B] = inBuff[33];
+
+                fanCooler = inBuff[34];
+                calRec = inBuff[35];
+                this->mtxPub_.unlock();
+            }
+        }
         
+        gettimeofday(&current_time, NULL);
+        t_msec = (current_time.tv_sec - start_time.tv_sec) * 1000 + (current_time.tv_usec - start_time.tv_usec)/1000;
+        //printf("I2C data processing time stamp %.3f \n", t_msec);
+        sprintf(str_buff, "%.2f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %d %d %d %d %d %d %d %d %d %d %d %.1f %.1f\n",
+                t_msec / 1000, temp[T_F], temp[T_L], temp[T_B], temp[T_R], temp[T_TOP], temp[T_PCB], temp[T_RING], temp[T_WAX], temp_ref_rec,
+                ctlPeltier_s, vibeAmp_s, vibeFreq_s, airflow_r, fanCooler,
+                irRawVals[IR_F], irRawVals[IR_FL], irRawVals[IR_BL], irRawVals[IR_B], irRawVals[IR_BR], irRawVals[IR_FR],
+                vFreq[A_F], vAmp[A_F]);
+        log_file.write(str_buff, strlen(str_buff));
+        log_file.flush();
+
         if (calRec == 0 || calSend == 0) {
             outBuff[0] = 2;
             outBuff[1] = tempCtlOn;
@@ -312,10 +378,19 @@ void CASU_Interface::i2cComm() {
             status = i2cPIC.sendData(outBuff, OUT_CAL_DATA_NUM);
             this->mtxi2c_.unlock();
             
-            usleep(20000);
             calSend = 1;
         }
         
+        gettimeofday(&tLoopCurrent, NULL);
+
+        elapsedTime = (tLoopCurrent.tv_sec - tLoopStart.tv_sec) * 1000.0;       // sec to ms
+        elapsedTime += (tLoopCurrent.tv_usec - tLoopStart.tv_usec) / 1000.0;   // us to ms
+        
+        //printf("Elapsed time: %f \n", elapsedTime);
+
+        if (elapsedTime < I2C_COMM_LOOP_TIME)
+            usleep((I2C_COMM_LOOP_TIME - elapsedTime) * 1000.0); //sleep in us for while loop to last I2C_COMM_LOOP_TIME ms
+
         //gettimeofday(&current_time, NULL);
         //t_msec = (current_time.tv_sec - start_time.tv_sec) * 1000 + (current_time.tv_usec - start_time.tv_usec)/1000;
         //printf("I2C finishing loop time stamp %.3f \n", t_msec);
@@ -345,7 +420,7 @@ void CASU_Interface::zmqPub() {
     /* Data publishing loop */
     while (1) {
 
-    timespec actual_time;
+        timespec actual_time;
 
         /* Proximity sensor values */
         this->mtxPub_.lock();
@@ -356,7 +431,6 @@ void CASU_Interface::zmqPub() {
                 range = 10;
             ranges.set_range(i, range);
             ranges.set_raw_value(i, irRawVals[i]);
-
         }
         this->mtxPub_.unlock();
         clock_gettime(CLOCK_REALTIME, &actual_time);
@@ -407,7 +481,7 @@ void CASU_Interface::zmqPub() {
             this->mtxPub_.lock();
             temp_ref.set_temp(this->temp_ref_rec);
             //temp_ref.set_temp(ctlPeltier_s);
-            if (this->temp_ref_rec < 26) // What is the meaning of 26?
+            if (this->temp_ref_rec < 26) // What is the meaning of 26? Half-life + 10
             { 
                 act_state = "Off";
             }
