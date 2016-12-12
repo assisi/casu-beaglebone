@@ -31,6 +31,14 @@ public:
 	 * 		   -1 - failed to initialize communication with i2c slave device \n
 	 * 		   -2 - failed to write data to i2c slave device
 	 */
+
+	void initI2C(int i2cBus, int i2cAddress, int i2c_connector);
+	 	/*! \brief Initializes an i2c device bus and address.
+	 *
+	 * @param i2cbus Number of an i2c file, default 0 which translates to the file /dev/i2c-0
+	 * @param i2cAddress Address of a device existing on the selected i2c bus, default 0x00
+	 */
+	
 	int sendData(char *buff, int bytesNum);
 
 	/*
@@ -49,6 +57,8 @@ public:
 	private:
 		char i2cBusSaved;
 		char muxAddressSaved;
+		I2C_Device mux;
+		int i2cConnector;
 		
 };
 
