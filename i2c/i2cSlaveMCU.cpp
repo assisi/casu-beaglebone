@@ -46,6 +46,7 @@ int I2C_SlaveMCU::sendData(char *buff, int bytesNum) {
 			usleep(1000);
 			cerr << "Did not set mask to mux, sleep for 1ms " << endl;
 		}
+		countMux++;
 		if (countMux >= 10) {
 			if (muxStatus <= 0) {
 				cerr << "Could not write mask to mux"  << endl;
@@ -107,6 +108,7 @@ int I2C_SlaveMCU::receiveData(char *buff, int bytesNum) {
 			usleep(1000);
 			cerr << "Did not set mask to mux, sleep for 1ms " << endl;
 		}
+		countMux++;
 		if (countMux >= 10) {
 			if (muxStatus <= 0) {
 				cerr << "Could not write mask to mux"  << endl;
