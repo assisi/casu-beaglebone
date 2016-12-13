@@ -1,0 +1,45 @@
+#!/bin/sh -e
+#
+# rc.local
+#
+# This script is executed at the end of each multiuser runlevel.
+# Make sure that the script will "exit 0" on success or any other
+# value on error.
+#
+# In order to enable or disable this script just change the execution
+# bits.
+#
+# By default this script does nothing.
+
+
+# Sync with real-time clock
+#source  /usr/share/rtc_ds1307/clock_init.sh
+
+# Start CASU firmware
+
+sleep 0.25
+
+i2cset -y 2 0x70 0x00 0xF
+
+sleep 0.25
+
+# stdout and stderr redirected to /dev/null - temporary workaround!
+# Should solve problem and later use:
+# /home/assisi/firmware/casu-fw /home/assisi/firmware/casu-021.fbc &
+/home/assisi/firmware/casu-fw /home/assisi/firmware/casu-001.fbc > /dev/null 2>&1 &
+
+sleep 0.25
+
+/home/assisi/firmware/casu-fw /home/assisi/firmware/casu-002.fbc > /dev/null 2>&1 &
+
+sleep 0.25
+
+/home/assisi/firmware/casu-fw /home/assisi/firmware/casu-003.fbc > /dev/null 2>&1 &
+
+sleep 0.25
+
+/home/assisi/firmware/casu-fw /home/assisi/firmware/casu-004.fbc > /dev/null 2>&1 &
+
+sleep 0.25
+
+exit 0
