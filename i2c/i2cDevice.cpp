@@ -40,46 +40,29 @@ int I2C_Device::openBus() {
 	return file;
 }
 
-
 /*
  * The following methods(writeByte, readByte, readBytes) are meant to be used with typical I2C devices which use numbered registers for storing data.
  * First the address of the device is sent, second the device's internal register address is sent and finally data byte(s) is read or written
  */
 
-
 int I2C_Device::writeByte(char regAddress, char data, int file) {
 
-	// initialize communication
-	if (ioctl(file, I2C_SLAVE, i2cAddress) < 0){
-		cerr << "i2c_SLAVE address " << i2cAddress << " failed..." << endl;
-		return -1;
-	}
-
-	char buffer[2];
-	buffer[0] = regAddress;
-	buffer[1] = data;
-
-	 if (write(file, buffer, 2) != 2) {
-		cerr << "Failure to write values to I2C Device address." << endl;
-		int count = 0;
-		if ((fflush(fdopen(file, "r+")) != 0) && (count < 10)) {
-			count++;
+		// initialize communication
+		if (ioctl(file, I2C_SLAVE, i2cAddress) < 0){
+			cerr << "i2c_SLAVE address " << i2cAddress << " failed..." << endl;
+			return -1;
 		}
-		else if (count >= 10) {
-			cerr << "Could not flush" << endl;
-		}
-		return -2;
-	}
 
-	int count = 0;
-	if ((fflush(fdopen(file, "r+")) != 0) && (count < 10)) {
-		count++;
-	}
-	else if (count >= 10) {
-		cerr << "Could not flush" << endl;
-	}
-	
-	return 1;
+		char buffer[2];
+		buffer[0] = regAddress;
+		buffer[1] = data;
+
+		 if (write(file, buffer, 2) != 2) {
+			cerr << "Failure to write values to I2C Device address." << endl;
+			return -2;
+		}
+
+		return 1;
 }
 
 int I2C_Device::writeBytes(char regAddress, char *buff, int bytesNum, int file) {
@@ -98,23 +81,9 @@ int I2C_Device::writeBytes(char regAddress, char *buff, int bytesNum, int file) 
 
 	if (write(file, buffer, bytesNum + 1) != (bytesNum + 1)) {
 		cerr << "Failure to write bytes to I2C Device address." << endl;
-	int count = 0;
-		if ((fflush(fdopen(file, "r+")) != 0) && (count < 10)) {
-			count++;
-		}
-		else if (count >= 10) {
-			cerr << "Could not flush" << endl;
-		}
 		return -2;
 	}
 
-	int count = 0;
-	if ((fflush(fdopen(file, "r+")) != 0) && (count < 10)) {
-		count++;
-	}
-	else if (count >= 10) {
-		cerr << "Could not flush" << endl;
-	}
 	return 1;
 }
 
@@ -147,7 +116,6 @@ int I2C_Device::readBytes(char regAddress, char *buff, int bytesNum, int file) {
 		return -3;
 	}
 
-
 	return 1;
 }
 
@@ -166,22 +134,9 @@ int I2C_Device::writeBuff(char *buff, int bytesNum, int file) {
 
 	if (write(file, buff, bytesNum) != bytesNum) {
 		//cerr << "Failure to write values to I2C Device address." << endl;
-int count = 0;
-		if ((fflush(fdopen(file, "r+")) != 0) && (count < 10)) {
-			count++;
-		}
-		else if (count >= 10) {
-			cerr << "Could not flush" << endl;
-		}
 		return -2;
 	}
-	int count = 0;
-	if ((fflush(fdopen(file, "r+")) != 0) && (count < 10)) {
-		count++;
-	}
-	else if (count >= 10) {
-		cerr << "Could not flush" << endl;
-	}
+
 	return 1;
 }
 
@@ -197,7 +152,6 @@ int I2C_Device::readBuff(char *buff, int bytesNum, int file) {
 		cerr << "Failure to read value from I2C Device address2." << endl;
 		return -3;
 	}
-
 
 	return 1;
 }
