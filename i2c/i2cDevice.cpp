@@ -96,7 +96,7 @@ int I2C_Device::readByte(char regAddress, char *data, int file) {
 	return status;
 }
 
-int I2C_Device::readBytes(char regAddress, char *buff, int bytesNum) {
+int I2C_Device::readBytes(char regAddress, char *buff, int bytesNum, int file) {
 
 	// initialize communication
 	if (ioctl(file, I2C_SLAVE, i2cAddress) < 0){
