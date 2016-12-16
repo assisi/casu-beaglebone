@@ -45,7 +45,7 @@
 #define IN_DATA_NUM_FAST 36
 #define IN_DATA_NUM_ACC 256
 
-#define I2C_COMM_LOOP_TIME 30.0
+#define I2C_COMM_LOOP_TIME 100.0
 
 /*! \brief Implements communication with CASU microcontroller (MCU), communication with a user code (CASU controller) and data logging.
  *
