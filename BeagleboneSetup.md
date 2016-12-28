@@ -1,4 +1,5 @@
- 	# Beaglebone environment setup instructions 
+
+# Beaglebone environment setup instructions 
 
 These instructions are intended for Beaglebone Green installation and setup. The steps are described for installation from a work station running on Ubuntu 14.04 (but should also work on 16.04).
 
@@ -101,7 +102,8 @@ Exit the root with `exit`.
         sudo apt-get update
         sudo apt-get install resolvconf ntp libzmq3-dev libprotobuf-dev libyaml-cpp-dev protobuf-compiler libboost-all-dev cmake python python-zmq python-protobuf python-yaml python-pygraphviz python-sphinx fabric
 2. Enable i2c bus 1. 
-    a. Download a compiled .dtbo file from *** (TODO: find location to store file). 
+
+    a. Download a compiled .dtbo file from (TODO: find location to store file). 
     b. Copy this file to BeagleBone: from local host, find downloaded file and secure-copy it to BeagleBone.
 
         scp BB-I2C1-00A0.dtbo assisi@bbg-0xy:/home/assisi 
@@ -110,7 +112,6 @@ Exit the root with `exit`.
         cd /home/assisi
         mv BB-I2C1-00A0.dtbo /lib/firmware
     d. Find and edit following two lines in `/boot/uEnv.txt` (one beginning with `cmdline=coherent_pool`, other with `#cape_enable=bone`):
-
 
         cmdline=coherent_pool=1M quiet cape_universal=enable
         (...)
