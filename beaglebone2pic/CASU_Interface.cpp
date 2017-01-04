@@ -231,9 +231,9 @@ void CASU_Interface::i2cComm() {
                 vAmp[A_L] = (inBuff[24] | (inBuff[25] << 8)) / 10.0;
 
                 vFreq[A_F] = (inBuff[26] | (inBuff[27] << 8));
-                vFreq[A_R] = (inBuff[28] | (inBuff[29] << 8)) / 10.0;
-                vFreq[A_B] = (inBuff[30] | (inBuff[31] << 8)) / 10.0;
-                vFreq[A_L] = (inBuff[32] | (inBuff[33] << 8)) / 10.0;
+                vFreq[A_R] = (inBuff[28] | (inBuff[29] << 8));
+                vFreq[A_B] = (inBuff[30] | (inBuff[31] << 8));
+                vFreq[A_L] = (inBuff[32] | (inBuff[33] << 8));
 
                 vibeAmp_s = inBuff[34];
                 vibeFreq_s = inBuff[35] | (inBuff[36] << 8);
@@ -262,9 +262,9 @@ void CASU_Interface::i2cComm() {
                 }
                 printf("%.1f\n", temp_ref_rec);
 
-                printf("vibeAmp meas ref = %.1f %d", vAmp[0], vibeAmp_s);
+                printf("vibeAmp meas_max ref = %.1f %.1f %.1f %.1f %d", vAmp[A_F], vAmp[A_R], vAmp[A_B], vAmp[A_L], vibeAmp_s);
                 printf("\n");
-                printf("vibeFreq meas ref = %.1f %d", vFreq[0], vibeFreq_s);
+                printf("vibeFreq meas_max ref = %.1f %.1f %.1f %.1f %d", vFreq[A_F], vFreq[A_R], vFreq[A_B], vFreq[A_L], vibeFreq_s);
                 printf("\n");
 
                 printf("ir raw F FL BL B BR FR = ");
