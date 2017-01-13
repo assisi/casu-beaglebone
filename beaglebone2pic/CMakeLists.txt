@@ -6,7 +6,8 @@ find_library(ZeroMQ_LIBRARY libzmq.so)
 #find_library(PROTOBUF_LIBRARY protobuf)
 
 # Needed variables for finding required headers and libraries
-SET(Boost_LIBRARIES ${CMAKE_FIND_ROOT_PATH}/usr/lib/arm-linux-gnueabihf/libboost_thread.so ${CMAKE_FIND_ROOT_PATH}/usr/lib/arm-linux-gnueabihf/libboost_system.so)
+SET(Boost_LIBRARIES ${CMAKE_FIND_ROOT_PATH}/usr/lib/arm-linux-gnueabihf/libboost_thread.so ${CMAKE_FIND_ROOT_PATH}/usr/lib/arm-linux-gnueabihf/libboost_system.so
+${CMAKE_FIND_ROOT_PATH}/usr/lib/arm-linux-gnueabihf/libboost_date_time.so)
 SET(PROTOBUF_LIBRARY ${CMAKE_FIND_ROOT_PATH}/usr/lib/arm-linux-gnueabihf/libprotobuf.so)
 SET(PROTOBUF_INCLUDE_DIR ${CMAKE_FIND_ROOT_PATH}/usr/include/google/protobuf)
 
@@ -45,4 +46,4 @@ set(casu_fw_SOURCES mainApp.cpp
 set(CMAKE_EXE_LINKER_FLAGS "-Wl,-rpath-link,${CMAKE_FIND_ROOT_PATH}/usr/lib/ -Wl,-rpath,${CMAKE_FIND_ROOT_PATH}/usr/lib/ -Wl,-rpath-link,${CMAKE_FIND_ROOT_PATH}/lib/arm-linux-gnueabihf -Wl,-rpath,${CMAKE_FIND_ROOT_PATH}/lib/arm-linux-gnueabihf")
 
 add_executable(casu-fw ${casu_fw_SOURCES})
-target_link_libraries(casu-fw ${ZeroMQ_LIBRARY} ${PROTOBUF_LIBRARY} ${Boost_LIBRARIES} ${yaml-cpp_LIBRARY} ${CMAKE_FIND_ROOT_PATH}/usr/lib/arm-linux-gnueabihf/libpthread.so)
+target_link_libraries(casu-fw ${ZeroMQ_LIBRARY} ${PROTOBUF_LIBRARY}  ${Boost_LIBRARIES} ${yaml-cpp_LIBRARY} ${CMAKE_FIND_ROOT_PATH}/usr/lib/arm-linux-gnueabihf/libpthread.so)

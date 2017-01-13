@@ -41,9 +41,9 @@
  */
 #define IN_DATA_NUM 55
 
-#define IN_DATA_NUM_SLOW 55
-#define IN_DATA_NUM_FAST 36
-#define IN_DATA_NUM_ACC 256
+#define IN_DATA_NUM_SLOW 78
+#define IN_DATA_NUM_FAST 59
+#define IN_DATA_NUM_ACC 4
 
 #define I2C_COMM_LOOP_TIME 100.0
 
@@ -77,7 +77,7 @@ public:
 		IR_B = 3,  /*!< IR sensor on back CASU side */
 		IR_BR = 4, /*!< IR sensor on back-right CASU side */
 		IR_FR = 5, /*!< IR sensor on forward-right CASU side  */
-	};	
+	};
 
 	/*! \brief Used for enumerating CASU temperature sensors.
 	 */
@@ -167,14 +167,14 @@ public:
 
 private:
 
-    /*! Utiliy function for setting header timestamps 
+    /*! Utiliy function for setting header timestamps
      */
     void set_msg_header(AssisiMsg::Header* header);
 
     /*! Function for handling periodic jobs
      */
     void periodic_jobs();
-    
+
     /*! Function for updating the vibration pattern
      */
     //void update_vibration_pattern(const boost::system::error_code& e);
@@ -186,18 +186,18 @@ private:
 	boost::mutex mtxi2c_; /*!< Mutex used for locking i2c bus. */
     I2C_Device mux;
 	I2C_SlaveMCU i2cPIC; /*!< Used for i2c communication with CASU MCU. */
-	
+
     EHM *ehm_device;	 /*!< Used for serial communication with electro-magnetic emitter control board. */
 
 	char outBuff[20]; /*!< Buffer for i2c outgoing data.  */
-    char inBuff[61]; /*!< Buffer for i2c incoming data. */
+    char inBuff[IN_DATA_NUM_SLOW]; /*!< Buffer for i2c incoming data. */
 	unsigned int dummy; /*!< Variable used for storing temporarily byte of incoming data.*/
 	char status; /*!< Status variable. */
     int calRec; /*!< Status variable for receive notification of calibration data. 1 - data received, 0 - data not yet received */
     int calSend; /*!< Status variable for sending calibration data. 1 - data sent, 0 - data not yet sent */
 	float temp[8]; /*!< Array containing latest temperature values 6 sensors + two estimated temperatures. */
-	float vAmp[4]; /*!< Array containing latest vibration amplitude values from four sensors. */
-	float vFreq[4]; /*!< Array containing latest vibration frequency values from four sensors. */
+	float vAmp[IN_DATA_NUM_ACC]; /*!< Array containing latest vibration amplitude values from four sensors. */
+	float vFreq[IN_DATA_NUM_ACC]; /*!< Array containing latest vibration frequency values from four sensors. */
 	int irRawVals[6]; /*!< Array containing latest infra-red proximity values from seven sensors. */
 	int ledDiag_s[3]; /*!< Array containing latest red, green and blue PWM values (0-100) of LED used as diagnostic light. */
 	int ctlPeltier_s; /*!< Latest PWM value (-100,100) set to Peltier device. */
@@ -231,11 +231,11 @@ private:
     int tempCtlOn; /*!< Temperature control on/off flag */
     int fanCtlOn;  /*!< Fan control on/off flag */
 	int i2c_connector;
-	
+
     std::string pub_addr; /*!< Address for publising zmq messages */
     std::string sub_addr; /*!< Address for subscribing to zmq messages */
     std::string pub_addr_af;
-    
+
     int i2c_bus;      /*!< The number of i2c bus being used for communication with dsPIC */
     int picAddress;  /*!< I2C address of dsPIC MCU */
 
