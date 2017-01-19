@@ -200,7 +200,7 @@ private:
 	float vFreq[IN_DATA_NUM_ACC]; /*!< Array containing latest vibration frequency values from four sensors. */
 	int irRawVals[6]; /*!< Array containing latest infra-red proximity values from seven sensors. */
 	int ledDiag_s[3]; /*!< Array containing latest red, green and blue PWM values (0-100) of LED used as diagnostic light. */
-	int ctlPeltier_s; /*!< Latest PWM value (-100,100) set to Peltier device. */
+	float ctlPeltier_s; /*!< Latest PWM value (-100,100) set to Peltier device. */
     int airflow_s; /*!< Latest PWM value (0,100) set to the actuator producing airflow. */
     int fanCooler; /*!< Latest PWM value (0,100) set to the fan which cools the PCB and aluminium cooler. */
 

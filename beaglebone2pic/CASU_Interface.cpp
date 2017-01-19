@@ -64,10 +64,6 @@ CASU_Interface::CASU_Interface(char *fbc_file)
     {
         temp[i] = 0.0;
     }
-    // TODO: next two lines are probably obsolete
-    // remove them next time
-    //temp[T_RING] = -1;
-    //temp[T_WAX] = -1;
 
     for (int i = 0; i <= A_R; i++)
     {
@@ -105,7 +101,6 @@ CASU_Interface::CASU_Interface(char *fbc_file)
     DIR *dir;
     class dirent *ent;
     class stat st;
-     // intended for zipping; not used
     const string casuName_begin = "casu-0";
     int count_log_files = 0;
     int count_old_log_files = 0;
@@ -144,7 +139,6 @@ CASU_Interface::CASU_Interface(char *fbc_file)
             }
         }
         else {
-            //not used because zip not working
             if (file_name.compare(0, casuName_begin.length(), casuName_begin) == 0) {
                 count_log_files++;
             }
@@ -179,15 +173,6 @@ CASU_Interface::CASU_Interface(char *fbc_file)
 
     closedir(dir);
 
-    /*
-    string systemtar1;
-    stringstream oldlog;
-    stringstream newlog;
-    oldlog << count_old_log_files;
-    newlog << count_log_files;
-    systemtar1 = "bash -c 'echo System works " + oldlog.str() + " " + newlog.str() + "  &>> /home/assisi/errorlog1.txt'";
-    system(systemtar1.c_str());
-    */
     if (count_old_log_files == count_log_files) {
         // tar
         string systemtar = "bash -c 'tar -C /home/assisi/firmware/old-log/ -czvf /home/assisi/firmware/archives/old-log" + old_date_time + ".tar.gz $(ls /home/assisi/firmware/old-log/) &>> /home/assisi/errorlog.txt'";
@@ -351,15 +336,15 @@ void CASU_Interface::i2cComm() {
                 irRawVals[IR_BL] = inBuff[45] | (inBuff[46] << 8);
                 irRawVals[IR_FL] = inBuff[47] | (inBuff[48] << 8);
 
-                ctlPeltier_s = inBuff[49];
-                if (ctlPeltier_s > 100) ctlPeltier_s = ctlPeltier_s - 201;
+                ctlPeltier_s = (inBuff[49] | (inBuff[50] << 8)) / 100.0;
+                if (ctlPeltier_s > 100) ctlPeltier_s = ctlPeltier_s - 201.0;
 
-                ledDiag_s[L_R] = inBuff[50];
-                ledDiag_s[L_G] = inBuff[51];
-                ledDiag_s[L_B] = inBuff[52];
+                ledDiag_s[L_R] = inBuff[51];
+                ledDiag_s[L_G] = inBuff[52];
+                ledDiag_s[L_B] = inBuff[53];
 
-                fanCooler = inBuff[53];
-                calRec = inBuff[54];
+                fanCooler = inBuff[54];
+                calRec = inBuff[55];
                 this->mtxPub_.unlock();
 
                 printf("temp F L B R TOP PCB RING WAX ref= ");
@@ -385,7 +370,7 @@ void CASU_Interface::i2cComm() {
                 }
                 printf("\n");
 
-                printf("peltier, airflow, fanCooler = %d %d %d\n", ctlPeltier_s, airflow_r, fanCooler);
+                printf("peltier, airflow, fanCooler = %.2f %d %d\n", ctlPeltier_s, airflow_r, fanCooler);
 
                 printf("calibration data rec = %d \n", calRec);
                 printf("_________________________________________________________________\n\n");
@@ -420,10 +405,10 @@ void CASU_Interface::i2cComm() {
 
     //            vFreq[A_F] = (inBuff[26] | (inBuff[27] << 8)) / 10.0;
     //            vFreq[A_R] = (inBuff[28] | (inBuff[29] << 8)) / 10.0;
-                vFreq[A_F] = (inBuff[8] | (inBuff[9] << 8)) / 10.0;
-                vFreq[A_R] = (inBuff[10] | (inBuff[11] << 8)) / 10.0;
-                vFreq[A_B] = (inBuff[12] | (inBuff[13] << 8)) / 10.0;
-                vFreq[A_L] = (inBuff[14] | (inBuff[15] << 8)) / 10.0;;
+                vFreq[A_F] = (inBuff[8] | (inBuff[9] << 8));
+                vFreq[A_R] = (inBuff[10] | (inBuff[11] << 8));
+                vFreq[A_B] = (inBuff[12] | (inBuff[13] << 8));
+                vFreq[A_L] = (inBuff[14] | (inBuff[15] << 8));;
 
                 vibeAmp_s = inBuff[16];
                 vibeFreq_s = inBuff[17] | (inBuff[18] << 8);
@@ -448,7 +433,7 @@ void CASU_Interface::i2cComm() {
         gettimeofday(&current_time, NULL);
         t_msec = (current_time.tv_sec - start_time.tv_sec) * 1000 + (current_time.tv_usec - start_time.tv_usec)/1000;
         //printf("I2C data processing time stamp %.3f \n", t_msec);
-        sprintf(str_buff, "%.2f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %d %d %d %d %d %d %d %d %d %d %d %.1f %.1f\n",
+        sprintf(str_buff, "%.2f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.2f %d %d %d %d %d %d %d %d %d %d %.1f %.1f\n",
                 t_msec / 1000, temp[T_F], temp[T_L], temp[T_B], temp[T_R], temp[T_TOP], temp[T_PCB], temp[T_RING], temp[T_WAX], temp_ref_rec,
                 ctlPeltier_s, vibeAmp_s, vibeFreq_s, airflow_r, fanCooler,
                 irRawVals[IR_F], irRawVals[IR_FL], irRawVals[IR_BL], irRawVals[IR_B], irRawVals[IR_BR], irRawVals[IR_FR],
@@ -511,6 +496,7 @@ void CASU_Interface::zmqPub() {
     cout << "Starting pub server: " << casuName << endl;
 
     int temp_clock = 0;
+    int fft_clock = 0;
     std::string data;
     AssisiMsg::RangeArray ranges;
     for(int i = 0; i <= IR_FR; i++) {
@@ -550,7 +536,7 @@ void CASU_Interface::zmqPub() {
         /* Temperature and vibration measurements */
         temp_clock++;
         if (temp_clock == 10) {
-            // Temperature is published 4 times less often
+            // Temperature is published 10 times less often
             this->mtxPub_.lock();
             for(int i = 0; i <= T_WAX; i++) {
                 temps.set_temp(i, temp[i]);
@@ -562,32 +548,12 @@ void CASU_Interface::zmqPub() {
             temps.SerializeToString(&data);
             zmq::send_multipart(zmqPub, casuName.c_str(), "Temp", "Temperatures", data);
 
-            /* Vibration measurements */
-            // Why is vibration inside the temperature loop?
-            AssisiMsg::VibrationReadingArray vibes;
-            AssisiMsg::VibrationReading *vibe;
-
-            this->mtxPub_.lock();
-            for(int i = 0; i < 4; i++) {
-                vibe = vibes.add_reading();
-                vibe->add_amplitude(vAmp[i]);
-                vibe->add_freq(vFreq[i]);
-            }
-
-            this->mtxPub_.unlock();
-
-            clock_gettime(CLOCK_REALTIME, &actual_time);
-            vibes.mutable_header()->mutable_stamp()->set_sec(actual_time.tv_sec);
-            vibes.mutable_header()->mutable_stamp()->set_nsec(actual_time.tv_nsec);
-            vibes.SerializeToString(&data);
-            zmq::send_multipart(zmqPub, casuName.c_str(), "Acc", "Measurements", data);
-
              /* Peltier actuator setpoint */
             Temperature temp_ref;
             this->mtxPub_.lock();
             temp_ref.set_temp(this->temp_ref_rec);
             //temp_ref.set_temp(ctlPeltier_s);
-            if (this->temp_ref_rec < 26) // What is the meaning of 26? Half-life + 10
+            if (this->temp_ref_rec < 26) // What is the meaning of 26?
             {
                 act_state = "Off";
             }
@@ -605,6 +571,31 @@ void CASU_Interface::zmqPub() {
             temp_clock = 0;
         }
 
+        /* FFt vibration measurements */
+        fft_clock++;
+        if (fft_clock == 5) {
+            // FFT is published 5 times less often
+
+            AssisiMsg::VibrationReadingArray vibes;
+            AssisiMsg::VibrationReading *vibe;
+
+            this->mtxPub_.lock();
+            vibe = vibes.add_reading();
+            for(int i = 0; i < IN_DATA_NUM_ACC; i++) {
+                vibe->add_amplitude(vAmp[i]);
+                vibe->add_freq(vFreq[i]);
+            }
+
+            this->mtxPub_.unlock();
+
+            clock_gettime(CLOCK_REALTIME, &actual_time);
+            vibes.mutable_header()->mutable_stamp()->set_sec(actual_time.tv_sec);
+            vibes.mutable_header()->mutable_stamp()->set_nsec(actual_time.tv_nsec);
+            vibes.SerializeToString(&data);
+            zmq::send_multipart(zmqPub, casuName.c_str(), "Fft", "Measurements", data);
+
+            fft_clock = 0;
+        }
 
         /* Speaker actuator setpoint */
         VibrationSetpoint vib_ref;
