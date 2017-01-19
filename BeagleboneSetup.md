@@ -3,13 +3,24 @@
 
 These instructions are intended for Beaglebone Green installation and setup. The steps are described for installation from a work station running on Ubuntu 14.04 (but should also work on 16.04).
 
-## Ubuntu 16.04 installation
+### Contents
 
+1. [Ubuntu 16.04 installation](ubuntu-16.04-installation)
+	1.1 [Ubuntu 16.04 image](ubuntu-16.04-image)
+	1.2 [Flash image to Beaglebone](flash-image-to-beaglebone)
+	1.3 [Network setup](network-setup)
+2. [Firmware & Hardware Dependencies](firmware-&-hardware-dependencies)
+3. [Firmware Installation](firmware-installation)
+4. [Resizing image partition](resizing-image-partition)
+5. [Enable RTC clock](enable-rtc-clock)
+6. [Locale warnings](locale-warnings)
+
+## Ubuntu 16.04 installation
 If you already have a prepared microSD card, skip to [Flash image to Beaglebone](#flash-image-to-beaglebone).
 
 ### Ubuntu 16.04 image
 
-Otherwise, [get a prebuilt image](http://elinux.org/BeagleBoardUbuntu#Demo_Image) for BeagleBone/BeagleBone Black. Do not download a flasher image. Follow the steps described on the link:
+Otherwise, [get a prebuilt image](http://elinux.org/BeagleBoardUbuntu#Demo_Image) for BeagleBone/BeagleBone Black. _Do not_ download a flasher image. Follow the steps described on the link:
 
 - download .tar file
 - verify and unpack image
@@ -43,7 +54,7 @@ If your card is larger than the BeagleBone flash memory, an error will be shown 
 3. Uninstall connman services
 
         sudo apt-get remove connman
-4. Explanation needed here. Arena location etc.
+4. Explanation needed here. Arena location etc. Do this.
 
         sudo su
         rm /etc/resolv.conf
@@ -60,11 +71,13 @@ If your card is larger than the BeagleBone flash memory, an error will be shown 
         # Example to keep MAC address between reboots
         #hwaddress ether DE:AD:BE:EF:CA:FE
 Exit the root with `exit`.
-6. Create _assisi_ user with a password _assisi_ and add it to necessary groups. Leave all field except password empty when creating a user.
+6. Create ___assisi___ user with a password ___assisi___ and add it to necessary groups. Leave all fields except password empty when creating a user.
 
-        sudo adduser assisi (password assisi, other empty)
+        sudo adduser assisi
         sudo usermod -a -G assisi,adm,kmem,dialout,cdrom,floppy,sudo,audio,dip,video,plugdev,users,netdev,i2c,admin,spi,systemd-journal,weston-launch,xenomai assisi
-7. Update `/etc/hosts`. Change local name to _bbg-0xy_ (replace _arm_ with _bbg-0xy_). Add following hosts to `/etc/local`: (TODO: check if airflow name is correct)
+7. Update `/etc/hosts`.
+	7.1. Change local name to _bbg-0xy_ (replace _arm_ with _bbg-0xy_).
+	7.2 Add following hosts to `/etc/local`:
 
         # CASUs
         10.42.0.1   control-workstation
@@ -93,11 +106,11 @@ Exit the root with `exit`.
 9. Optionally, setup passwordless login from host, on host machine:
 
         ssh assisi@bbg-0xy mkdir -p .ssh
-        cat .ssh/id_rsa.pub | ssh assisi@bbg-00x 'cat >> .ssh/authorized_keys'
+        cat .ssh/id_rsa.pub | ssh assisi@bbg-0xy 'cat >> .ssh/authorized_keys'
 
-### Firmware & Hardware Dependencies
+## Firmware & Hardware Dependencies
 
-1. Connect to your BBG. Install updates and packages. Temporarily ignore locale warnings.
+1. Connect to your BBG. Install updates and packages. Temporarily ignore locale warnings (fix [here](locale-warnings)).
 
         sudo apt-get update
         sudo apt-get install resolvconf ntp libzmq3-dev libprotobuf-dev libyaml-cpp-dev protobuf-compiler libboost-all-dev cmake python python-zmq python-protobuf python-yaml python-pygraphviz python-sphinx fabric
@@ -122,23 +135,25 @@ Exit the root with `exit`.
 
         /opt/scripts/tools/developers/update_initrd.sh
 
-### Firmware Installation
+## Firmware Installation
 
 1. Install assisipy
 
         sudo pip install assisipy
 2. Download BeagleBone firmware from github
 
-        cd
+        cd /home/assisi/
         mkdir firmware
         mkdir firmware/log
+        mkdir firmware/old-log
+        mkdir firmware/archives
         git clone https://github.com/assisi/casu-beaglebone
         cd casu-beaglebone
         git remote set-url origin https://github.com/assisi/casu-beaglebone
         git submodule update --init
 3. Compile firmware
 
-        ##cd casu-beaglebone
+        cd /home/assisi/casu-beaglebone
         mkdir build
         cd build
         cmake ..
@@ -188,3 +203,154 @@ Exit the root with `exit`.
         sleep 0.25
 
         exit 0
+
+## Resizing image partition
+
+If an image of less than 4GB available is flashed to a BBG, resizing is possible through the following steps.
+
+        sudo fdisk /dev/mmcblk1
+
+Now delete the existing partition and create a new one with the following set of commands and parameters when asked. Empty line means you should accept the default value (press enter).
+
+        d
+        n
+        p
+
+        8192
+
+        w
+
+Save the new partition table.
+
+        sudo resize2fs /dev/mmcblk1p1
+
+## Enable RTC clock
+
+Obtain a 3V CR1220 battery and insert it into the slot. Switch to superuser.
+
+        sudo su
+
+Make sure you have internet access (you can ping www.google.com). Run i2c detect to check the BeagleBone detects the RTC.
+
+        i2cdetect -y -r 2
+
+The output should be as below. If there are only two "-" at field 68, enable i2c bus as in step two of [Firmware & Hardware Dependencies](#firmware-&-hardware-dependencies).
+
+        0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
+        00:          -- -- -- -- -- -- -- -- -- -- -- -- --
+        10: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+        20: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+        30: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+        40: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+        50: -- -- -- -- UU UU UU UU -- -- -- -- -- -- -- --
+        60: -- -- -- -- -- -- -- -- UU -- -- -- -- -- -- --
+        70: 70 -- -- -- -- -- -- --
+
+Run the following.
+
+        echo ds1307 0x68 > /sys/class/i2c-adapter/i2c-2/new_device
+        hwclock -r -f /dev/rtc1
+
+The output should be:
+
+        Mon 01 Jan 2000 HH:MM:SS PM UTC  .000000 seconds
+
+Also check:
+
+	    hwclock -r -f /dev/rtc
+
+The output should be:
+
+        x 11 Feb 2016 HH:MM:SS PM UTC  .000000 seconds
+Also check:
+
+        hwclock -r -f /dev/rtc0
+
+This should output (or other date, not the one of today):
+
+        x 11 Feb 2016 HH:MM:SS PM UTC  .000000 seconds
+
+Now run the following.
+
+        ntpd -b -s -u -g pool.ntp.org
+        date
+        timedatectl
+
+Wait until the output of the following is current date time
+
+        hwclock -r -f /dev/rtc0
+
+When you reached the correct time, write the current time:
+
+        hwclock -w -f /dev/rtc1
+
+Save this settings to run clock update at boot.
+
+        mkdir /usr/share/rtc_ds1307
+        nano /usr/share/rtc_ds1307/clock_init.sh
+
+
+Paste this into the clock_init.sh
+
+        #!/bin/bash
+        sleep 5
+        echo ds1307 0x68 > /sys/class/i2c-adapter/i2c-2/new_device
+        hwclock -s -f /dev/rtc1
+        hwclock -w
+
+Paste the following into `/lib/systemd/system/rtc-ds1307.service`
+
+        [Unit]
+        Description=DS1307 RTC Service
+        [Service]
+        Type=simple
+        WorkingDirectory=/usr/share/rtc_ds1307
+        ExecStart=/bin/bash clock_init.sh
+        SyslogIdentifier=rtc_ds1307
+        [Install]
+        WantedBy=multi-user.target
+
+Run
+
+        systemctl enable rtc-ds1307.service
+
+Reboot (unplug from power). It should be working.
+
+### Locale warnings
+
+If a warning like this shows up during package installation or similar:
+
+		perl: warning: Setting locale failed.
+		perl: warning: Please check that your locale settings:
+			LANGUAGE = (unset),
+			LC_ALL = (unset),
+			LC_TIME = "hr_HR.UTF-8",
+			LC_MONETARY = "hr_HR.UTF-8",
+			LC_ADDRESS = "hr_HR.UTF-8",
+			LC_TELEPHONE = "hr_HR.UTF-8",
+			LC_NAME = "hr_HR.UTF-8",
+			LC_MEASUREMENT = "hr_HR.UTF-8",
+			LC_IDENTIFICATION = "hr_HR.UTF-8",
+			LC_NUMERIC = "hr_HR.UTF-8",
+			LC_PAPER = "hr_HR.UTF-8",
+			LANG = "en_US.UTF-8"
+		    are supported and installed on your system.
+		perl: warning: Falling back to a fallback locale ("en_US.UTF-8").
+		locale: Cannot set LC_ALL to default locale: No such file or directory
+		Preconfiguring packages ...
+		(Reading database ... 47720 files and directories currently installed.)
+		Removing connman (1.32-git20160418-0rcnee1~bpo1604+20160418+1) ...
+		Selecting previously unselected package resolvconf.
+		(Reading database ... 47700 files and directories currently installed.)
+		Preparing to unpack .../resolvconf_1.78ubuntu2_all.deb ...
+		Unpacking resolvconf (1.78ubuntu2) ...
+		Processing triggers for systemd (229-4ubuntu8) ...
+		Processing triggers for ureadahead (0.100.0-19) ...
+		Setting up resolvconf (1.78ubuntu2) ...
+		locale: Cannot set LC_ALL to default locale: No such file or directory
+		Processing triggers for resolvconf (1.78ubuntu2) ...
+		locale: Cannot set LC_ALL to default locale: No such file or directory
+
+Set locale settings as follows and re-login:
+
+		sudo sh -c "echo 'LANG=en_US.UTF-8\nLC_ALL=en_US.UTF-8' > /etc/default/locale"
