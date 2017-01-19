@@ -5,15 +5,15 @@ These instructions are intended for Beaglebone Green installation and setup. The
 
 ### Contents
 
-1. [Ubuntu 16.04 installation](ubuntu-16.04-installation)
-	1.1 [Ubuntu 16.04 image](ubuntu-16.04-image)
-	1.2 [Flash image to Beaglebone](flash-image-to-beaglebone)
-	1.3 [Network setup](network-setup)
-2. [Firmware & Hardware Dependencies](firmware-&-hardware-dependencies)
-3. [Firmware Installation](firmware-installation)
-4. [Resizing image partition](resizing-image-partition)
-5. [Enable RTC clock](enable-rtc-clock)
-6. [Locale warnings](locale-warnings)
+1. [Ubuntu 16.04 installation](#ubuntu-1604-installation)
+	1. [Ubuntu 16.04 image](#ubuntu-1604-image) 
+	2. [Flash image to Beaglebone](#flash-image-to-beaglebone) 
+	3. [Network setup](#network-setup) 
+2. [Firmware and Hardware Dependencies](#firmware-and-hardware-dependencies)
+3. [Firmware Installation](#firmware-installation)
+4. [Resizing image partition](#resizing-image-partition)
+5. [Enable RTC clock](#enable-rtc-clock)
+6. [Locale warnings](#locale-warnings)
 
 ## Ubuntu 16.04 installation
 If you already have a prepared microSD card, skip to [Flash image to Beaglebone](#flash-image-to-beaglebone).
@@ -108,9 +108,9 @@ Exit the root with `exit`.
         ssh assisi@bbg-0xy mkdir -p .ssh
         cat .ssh/id_rsa.pub | ssh assisi@bbg-0xy 'cat >> .ssh/authorized_keys'
 
-## Firmware & Hardware Dependencies
+## Firmware and Hardware Dependencies
 
-1. Connect to your BBG. Install updates and packages. Temporarily ignore locale warnings (fix [here](locale-warnings)).
+1. Connect to your BBG. Install updates and packages. Temporarily ignore locale warnings (fix [here](#locale-warnings)).
 
         sudo apt-get update
         sudo apt-get install resolvconf ntp libzmq3-dev libprotobuf-dev libyaml-cpp-dev protobuf-compiler libboost-all-dev cmake python python-zmq python-protobuf python-yaml python-pygraphviz python-sphinx fabric
