@@ -35,7 +35,7 @@
 
 /*! Number of bytes (calibration data) sent to CASU MCU through i2c communication.
  */
-#define OUT_CAL_DATA_NUM 13
+#define OUT_CAL_DATA_NUM 26
 
 /*! Number of bytes received from CASU MCU through i2c communication.
  */
@@ -61,7 +61,7 @@ public:
     /*! \brief Constructor.
      *
      * @param fbc_file Firmware board configuration file
-     */
+*/
     CASU_Interface(char *fbc_file);
 
     /*! Destructor.
@@ -113,7 +113,7 @@ public:
     /*! \brief Out messages id.
      */
     enum MSG_OUT_ID {
-        MSG_RESET_OUT_ID = 1, /*!< Reset msg id */
+        MSG_RESET_ID = 1, /*!< Reset msg id */
         MSG_CAL_ID = 2,   /*!< Msg cal id */
         MSG_REF_VIBE_ID = 3, /*!< Vibration red id */
         MSG_REF_LED_ID = 4,  /*!< LED ref id */
@@ -231,6 +231,15 @@ private:
     int tempCtlOn; /*!< Temperature control on/off flag */
     int fanCtlOn;  /*!< Fan control on/off flag */
     int i2c_connector;
+
+    //SMC parameters
+    int controller_type;
+    float C1_sigma;
+    float C2_sigma_m;
+    float K1_alpha;
+    float K2_beta;
+    float epsilon;
+    float alphak1;
 
     std::string pub_addr; /*!< Address for publising zmq messages */
     std::string sub_addr; /*!< Address for subscribing to zmq messages */

@@ -26,7 +26,6 @@ using namespace boost::asio;
 CASU_Interface::CASU_Interface(char *fbc_file)
     {
 
-
     YAML::Node fbc = YAML::LoadFile(fbc_file);
     casuName = fbc["name"].as<string>();
     pub_addr = fbc["pub_addr"].as<string>();
@@ -43,7 +42,14 @@ CASU_Interface::CASU_Interface(char *fbc_file)
     Kf2 = fbc["Kf2"].as<float>();
     Kf3 = fbc["Kf3"].as<float>();
     fanCtlOn = fbc["fanCtlOn"].as<int>();
-
+    // SMC parameters
+    controller_type = fbc["controller_type"].as<int>(); // 0 = PID, 1 = SMC
+    C1_sigma = fbc["C1_sigma"].as<float>();
+    C2_sigma_m = fbc["C2_sigma_m"].as<float>();
+    K1_alpha = fbc["K1_alpha"].as<float>();
+    K2_beta = fbc["K2_beta"].as<float>();
+    epsilon = fbc["epsilon"].as<float>();
+    alphak1 = fbc["alphak1"].as<float>();
     //mux.initI2C(2, 112);
     //mux.writeByte(0, 0xFF);
 
@@ -347,7 +353,7 @@ void CASU_Interface::i2cComm() {
                 calRec = inBuff[55];
                 this->mtxPub_.unlock();
 
-                printf("temp F L B R TOP PCB RING WAX ref= ");
+                printf("temp model alpha sigma sigma_m TOP PCB RING WAX ref= ");
                 for (int i = 0; i < 8; i++) {
                     printf("%.1f ", temp[i]);
                 }
@@ -464,6 +470,33 @@ void CASU_Interface::i2cComm() {
             outBuff[10] = (tmp & 0x00FF);
             outBuff[11] = (tmp & 0xFF00) >> 8;
             outBuff[12] = fanCtlOn;
+
+            outBuff[13] = controller_type;
+
+            tmp = C1_sigma * 1000;
+            if (tmp < 0) tmp = tmp + 65536;
+            outBuff[14] = (tmp & 0x00FF);
+            outBuff[15] = (tmp & 0xFF00) >> 8;
+            tmp = C2_sigma_m * 1000;
+            if (tmp < 0) tmp = tmp + 65536;
+            outBuff[16] = (tmp & 0x00FF);
+            outBuff[17] = (tmp & 0xFF00) >> 8;
+            tmp = K1_alpha * 10000;
+            if (tmp < 0) tmp = tmp + 65536;
+            outBuff[18] = (tmp & 0x00FF);
+            outBuff[19] = (tmp & 0xFF00) >> 8;
+            tmp = K2_beta * 10000;
+            if (tmp < 0) tmp = tmp + 65536;
+            outBuff[20] = (tmp & 0x00FF);
+            outBuff[21] = (tmp & 0xFF00) >> 8;
+            tmp = epsilon * 1000;
+            if (tmp < 0) tmp = tmp + 65536;
+            outBuff[22] = (tmp & 0x00FF);
+            outBuff[23] = (tmp & 0xFF00) >> 8;
+            tmp = alphak1 * 100;
+            if (tmp < 0) tmp = tmp + 65536;
+            outBuff[24] = (tmp & 0x00FF);
+            outBuff[25] = (tmp & 0xFF00) >> 8;
 
             this->mtxi2c_.lock();
             status = i2cPIC.sendData(outBuff, OUT_CAL_DATA_NUM);
