@@ -442,7 +442,7 @@ void CASU_Interface::i2cComm() {
         log_file.flush();
 
         if (calRec == 0 || calSend == 0) {
-            outBuff[0] = 2;
+            outBuff[0] = MSG_CAL_ID;
             outBuff[1] = tempCtlOn;
             int tmp = Kp * 10;
             //printf("Sending temperature %d \n", tmp);
