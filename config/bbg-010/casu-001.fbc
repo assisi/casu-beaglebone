@@ -43,45 +43,23 @@ Kf3 : 0.7893
 # Flag determines if fan for cooling casu will runn, 1 - on, 0 - off
 fanCtlOn : 1
 
-
 # 0 = PI; 1 = SMC
-
 controller_type : 1
 
-
-
 # Derivative gain
-
 C1_sigma : 1.0
 
-
-
 # Derivative gain in alpha adaptation
-
 C2_sigma_m : 1.0
 
-
-
 # Alpha adaptation speed
-
 K1_alpha : 0.01
 
-
-
 # Beta / alpha relation
-
 K2_beta : 0.01
 
-
-
 # Deadzone for sigma_m
-
-epsilon : 0.4
-
-
+epsilon : 0.3
 
 # Alpha initial condition
-
-alphak1 : 7.0
-
-
+alphak1 : 9.13
