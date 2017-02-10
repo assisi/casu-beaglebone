@@ -9,6 +9,7 @@
 #include <sys/time.h>
 #include <climits>
 #include <dirent.h>
+#include <cmath>
 
 #include <boost/bind.hpp>
 #include <boost/thread.hpp>
@@ -69,6 +70,8 @@ CASU_Interface::CASU_Interface(char *fbc_file)
     for (int i = 0; i <= T_WAX; i++)
     {
         temp[i] = 0.0;
+        temp_old[i] = 0.0;
+        index_filter[i] = 0;
     }
 
     for (int i = 0; i <= A_R; i++)
@@ -98,9 +101,14 @@ CASU_Interface::CASU_Interface(char *fbc_file)
 
     temp_ref = 0.0;
     temp_ref_rec = 0.0;
+    ramp_slope = 0.0;
+
+    alpha = alphak1;
 
     calRec = 0;
     calSend = 0;
+
+    filtered_glitch = 0;
 
     // Setup logging
     // Move old logs to arhive folder ~/firmware/old-log
@@ -231,8 +239,7 @@ void CASU_Interface::i2cComm() {
     gettimeofday(&start_time, NULL);
     double t_msec;
     timeval current_time;
-    sprintf(str_buff, "time temp_f temp_r temp_b temp_l temp_top temp_pcb temp_casu temp_wax temp_ref pelt vibeAmp_s vibeFreq_s airfolow_s fanCool \
-            proxi_f proxi_fr proxi_br proxi_b proxi_bl proxi_fl flag_error flag_count\n");
+    sprintf(str_buff, "time temp_f temp_r temp_b temp_l temp_top temp_pcb temp_casu temp_wax temp_ref pelt vibeAmp_s vibeFreq_s airfolow_s fanCool proxi_f proxi_fr proxi_br proxi_b proxi_bl proxi_fl alpha filtered_glitch\n");
     log_file.write(str_buff, strlen(str_buff));
     log_file.flush();
 
@@ -240,6 +247,7 @@ void CASU_Interface::i2cComm() {
 
     // First loop slow to get temperature values
     int flag_first_loop_run = 1;
+    int wait_until_all_set = 0;
 
     while(1) {
         gettimeofday(&tLoopStart, NULL);
@@ -264,6 +272,7 @@ void CASU_Interface::i2cComm() {
 
             if (status <= 0) {
                 cerr << "I2C initialization unsuccessful, exiting thread" << std::endl;
+                wait_until_all_set = 0;
             }
             else {
                 //cout << "Read bytes: " << IN_DATA_NUM << std::endl;
@@ -322,6 +331,34 @@ void CASU_Interface::i2cComm() {
                 else
                     temp_ref_rec = dummy / 10.0;
 
+                for (int i = 0; i < T_WAX; i++) {
+                    if ((temp[i] > 20) && (temp[i] < 50) && (wait_until_all_set != 8))
+                        wait_until_all_set++;
+                }
+
+                if (wait_until_all_set == 8) {
+                    for (int i = 0; i < T_WAX; i++) {
+                        if (temp_old[i] == 0.0) {
+                            temp_old[i] = temp[i];
+                        }
+                        else {
+                            if ((temp[i] - temp_old[i] > 1) || (temp[i] - temp_old[i] < -1)) {
+                                if (index_filter[i] < 5) {
+                                    temp[i] = temp_old[i];
+                                }
+                                index_filter[i]++;
+                            }
+                            else {
+                                temp_old[i] = temp[i];
+                                index_filter[i] = 0;
+                            }
+                        }
+                    }
+                }
+                else {
+                    wait_until_all_set = 0;
+                }
+
                 vAmp[A_F] = (inBuff[18] | (inBuff[19] << 8)) / 10.0;
                 vAmp[A_R] = (inBuff[20] | (inBuff[21] << 8)) / 10.0;
                 vAmp[A_B] = (inBuff[22] | (inBuff[23] << 8)) / 10.0;
@@ -351,13 +388,19 @@ void CASU_Interface::i2cComm() {
 
                 fanCooler = inBuff[54];
                 calRec = inBuff[55];
+
+                alpha = (inBuff[56] | (inBuff[57] << 8)) / 100.0;
+                filtered_glitch = inBuff[58];
+
                 this->mtxPub_.unlock();
 
-                printf("temp model alpha sigma sigma_m TOP PCB RING WAX ref= ");
+                printf("temp f r b l TOP PCB RING WAX ref= ");
                 for (int i = 0; i < 8; i++) {
                     printf("%.1f ", temp[i]);
                 }
                 printf("%.1f\n", temp_ref_rec);
+
+                printf("alpha %.2f\n", alpha);
 
                 printf("vibeAmp meas_max ref = %.1f %.1f %.1f %.1f %d", vAmp[A_F], vAmp[A_R], vAmp[A_B], vAmp[A_L], vibeAmp_s);
                 printf("\n");
@@ -379,6 +422,7 @@ void CASU_Interface::i2cComm() {
                 printf("peltier, airflow, fanCooler = %.2f %d %d\n", ctlPeltier_s, airflow_r, fanCooler);
 
                 printf("calibration data rec = %d \n", calRec);
+                printf("glitch filtered flag + filter index = %d %d \n", filtered_glitch, index_filter[1]+index_filter[2]+index_filter[3]+index_filter[4]+index_filter[5]+index_filter[6]+index_filter[7]+index_filter[0]);
                 printf("_________________________________________________________________\n\n");
 
                 gettimeofday(&tOutputStart, NULL);
@@ -439,11 +483,7 @@ void CASU_Interface::i2cComm() {
         gettimeofday(&current_time, NULL);
         t_msec = (current_time.tv_sec - start_time.tv_sec) * 1000 + (current_time.tv_usec - start_time.tv_usec)/1000;
         //printf("I2C data processing time stamp %.3f \n", t_msec);
-        sprintf(str_buff, "%.2f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.2f %d %d %d %d %d %d %d %d %d %d %.1f %.1f\n",
-                t_msec / 1000, temp[T_F], temp[T_L], temp[T_B], temp[T_R], temp[T_TOP], temp[T_PCB], temp[T_RING], temp[T_WAX], temp_ref_rec,
-                ctlPeltier_s, vibeAmp_s, vibeFreq_s, airflow_r, fanCooler,
-                irRawVals[IR_F], irRawVals[IR_FL], irRawVals[IR_BL], irRawVals[IR_B], irRawVals[IR_BR], irRawVals[IR_FR],
-                vFreq[A_F], vAmp[A_F]);
+        sprintf(str_buff, "%.2f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.2f %d %d %d %d %d %d %d %d %d %d %.2f %d\n", t_msec / 1000, temp[T_F], temp[T_L], temp[T_B], temp[T_R], temp[T_TOP], temp[T_PCB], temp[T_RING], temp[T_WAX], temp_ref_rec, ctlPeltier_s, vibeAmp_s, vibeFreq_s, airflow_r, fanCooler, irRawVals[IR_F], irRawVals[IR_FL], irRawVals[IR_BL], irRawVals[IR_B], irRawVals[IR_BR], irRawVals[IR_FR], alpha, filtered_glitch);
         log_file.write(str_buff, strlen(str_buff));
         log_file.flush();
 
@@ -841,6 +881,7 @@ void CASU_Interface::zmqSub()
                 printf("Received EM device message: %s\n \
                        ...Discarding message as we are now longer using electro-magnetic emitters", command.data());
             }
+            // TODO add second parameter - ramp_slope; also add to assisimsg & assisipy & arena-ui
             else if (device == "Peltier") {
                 printf("Received Peltier device message: %s\n", command.data());
                 if (command == "On") {
@@ -850,6 +891,14 @@ void CASU_Interface::zmqSub()
                     temp_ref = temp_msg.temp();
                     if (temp_ref < 26)
                         temp_ref = 0;
+                    if (temp_msg.has_slope()) {
+                        ramp_slope = temp_msg.slope();
+                        //cout << "Is inf " << isinf(ramp_slope) << endl;
+                        cout << "Slope: " << ramp_slope << endl;
+                    }
+                    else {
+                        ramp_slope = 0.025; // default slope - reference changes ramp_slope degrees/second
+                    }
                     mtxSub_.unlock();
                     printf("Reference temperature %.1f \n", temp_ref);
                 }
@@ -866,8 +915,11 @@ void CASU_Interface::zmqSub()
                     if (tmp < 0) tmp = tmp + 65536;
                     out_i2c_buff[1] = (tmp & 0x00FF);
                     out_i2c_buff[2] = (tmp & 0xFF00) >> 8;
+                    tmp = ramp_slope * 1000;
+                    out_i2c_buff[3] = (tmp & 0x00FF);
+                    out_i2c_buff[4] = (tmp & 0xFF00) >> 8;
                     this->mtxi2c_.lock();
-                    status = i2cPIC.sendData(out_i2c_buff, 3);
+                    status = i2cPIC.sendData(out_i2c_buff, 5);
                     this->mtxi2c_.unlock();
                 }
             }

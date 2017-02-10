@@ -88,7 +88,7 @@ public:
         T_L = 3, /*!< Temperature sensor on left CASU side */
         T_TOP = 4,  /*!< Top temperature sensor (on flex PCB) */
         T_PCB = 5, /*!< Temperature sensor on main PCB */
-        T_RING = 6, /*!< Estimated ring temperature (just the average of T_F, T_L, T_B, T_R?) */
+        T_RING = 6, /*!< Estimated ring temperature (average of T_F, T_L, T_B, T_R) */
         T_WAX = 7 /*!< Estimated wax temeperature */
 
     };
@@ -196,6 +196,8 @@ private:
     int calRec; /*!< Status variable for receive notification of calibration data. 1 - data received, 0 - data not yet received */
     int calSend; /*!< Status variable for sending calibration data. 1 - data sent, 0 - data not yet sent */
     float temp[8]; /*!< Array containing latest temperature values 6 sensors + two estimated temperatures. */
+    float temp_old[8];
+    int index_filter[8];
     float vAmp[IN_DATA_NUM_ACC]; /*!< Array containing latest vibration amplitude values from four sensors. */
     float vFreq[IN_DATA_NUM_ACC]; /*!< Array containing latest vibration frequency values from four sensors. */
     int irRawVals[6]; /*!< Array containing latest infra-red proximity values from seven sensors. */
@@ -206,6 +208,9 @@ private:
 
     float temp_ref; /*!< Actual reference value for CASU temperature. */
     float temp_ref_rec; /*!< Setted feference value for CASU temperature received from dsPIC. */
+    float ramp_slope; /*!<Slope of the ramp limiter for temperature reference. If step reference ramp_slope = 0. */
+    float alpha; /*!< Current value of SMC adaptive temperature controller parameter alpha. */
+    int filtered_glitch; /*!< Flag - received temp_wax value was filtered on PIC before sending. */
     int ledDiag_r[3];  /*!< Actual reference values (RGB) for diagnostic LED. */
 
     int vibeAmp_s; /*!< Latest reference value for speaker amplitude. */
