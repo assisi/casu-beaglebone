@@ -14,6 +14,7 @@ These instructions are intended for Beaglebone Green installation and setup. The
 4. [Resizing image partition](#resizing-image-partition)
 5. [Enable RTC clock](#enable-rtc-clock)
 6. [Locale warnings](#locale-warnings)
+7. [NTP update](#ntp-update)
 
 ## Ubuntu 16.04 installation
 If you already have a prepared microSD card, skip to [Flash image to Beaglebone](#flash-image-to-beaglebone).
@@ -113,7 +114,7 @@ Exit the root with `exit`.
 1. Connect to your BBG. Install updates and packages. Temporarily ignore locale warnings (fix [here](#locale-warnings)).
 
         sudo apt-get update
-        sudo apt-get install resolvconf ntp libzmq3-dev libprotobuf-dev libyaml-cpp-dev protobuf-compiler libboost-all-dev cmake python python-zmq python-protobuf python-yaml python-pygraphviz python-sphinx fabric
+        sudo apt-get install resolvconf libzmq3-dev libprotobuf-dev libyaml-cpp-dev protobuf-compiler libboost-all-dev cmake python python-zmq python-protobuf python-yaml python-pygraphviz python-sphinx fabric
 2. Enable i2c bus 1.
 
     a. Download .dts from [github](https://github.com/jadonk/cape-firmware/blob/master/arch/arm/boot/dts/BB-I2C1-00A0.dts). Copy it to the BeagleBone and compile.
@@ -354,3 +355,52 @@ If a warning like this shows up during package installation or similar:
 Set locale settings as follows and re-login:
 
 		sudo sh -c "echo 'LANG=en_US.UTF-8\nLC_ALL=en_US.UTF-8' > /etc/default/locale"
+
+
+### NTP update
+
+To automatically update date and time before firmware run on boot, follow these steps.
+
+1. Remove existing ntp service and install `ntpdate`
+
+        sudo apt purge ntp
+        sudo apt install ntpdate
+2. Write a service named `setdate-initfirmware.service` in `/etc/systemd/system` (paste the following)
+
+        [Unit]
+        Description=Sets time and date using ntpdate, starts CASU firmware
+        After=network-online.target
+	
+        [Service]
+        Type=forking
+        ExecStart=/home/assisi/.init_script.sh
+	
+        [Install]
+        WantedBy=multi-user.target
+3. Run the following
+
+        sudo systemctl daemon-reload
+        sudo systemctl enable setdate-initfirmware.service
+3. Write a script /home/assisi/.init_script.sh and make it `chmod +x`
+
+        #!/bin/bash
+	
+        echo "Running as user $USER $UID
+	
+        ntpdate -v ntp.ubuntu.com
+	
+        /home/assisi/.fw_run.sh
+4. Write a script to start CASU firmware /home/assisi/.fw_run.sh and make it executable with `chmod +x`
+
+        #!/bin/bash
+	
+        /home/assisi/firmware/casu-fw /home/assisi/firmware/casu-001.fbc > /dev/null 2>&1 &
+        sleep 0.25
+        /home/assisi/firmware/casu-fw /home/assisi/firmware/casu-002.fbc > /dev/null 2>&1 &
+        sleep 0.25
+        /home/assisi/firmware/casu-fw /home/assisi/firmware/casu-003.fbc > /dev/null 2>&1 &
+        sleep 0.25
+        /home/assisi/firmware/casu-fw /home/assisi/firmware/casu-004.fbc > /dev/null 2>&1 &
+        sleep 0.25
+        exit 0
+5. Remove firmware start from /etc/rc.local
