@@ -1,7 +1,7 @@
 Abstract
 ========
 
-Source code for the "Casu firmware" running on the Beaglebone Black.
+Source code for the "Casu firmware" running on a Beaglebone.
 
 Building the software
 =====================
@@ -23,7 +23,7 @@ Below is the full backup and restore procedure. Depending on your use-case, only
 Backing up to SD card
 ---------------------
 
-Insert the SD card. Check what's mounted where using the `df` command. Assuming that the internal flash memory (i.e. the device where `/` is mounted) is located at `/dev/mmcblk1` and the SD is at `/dev/mmcblk0`, backing up is performed using the following command:
+Insert the SD card. Check the mount point locations using the `df` command. Assuming that the internal flash memory (i.e., the device where `/` is mounted) is located at `/dev/mmcblk1` and the SD is at `/dev/mmcblk0`, backing up is performed using the following command:
 
 ```
 sudo dd if=/dev/mmcblk1 of=/dev/mmcblk0 bs=4M
@@ -32,7 +32,7 @@ sudo dd if=/dev/mmcblk1 of=/dev/mmcblk0 bs=4M
 TODO: check if sudo is really necessary
 TODO: check additional options for the case where we're backing up to an SD card which is larger than the BeagleBone's internal memory
 
-On Ubuntu 14.04 no progress is displayed. To display the current status of the `dd` process, send the following signal:
+By default, no progress is displayed on Ubuntu 14.04. To display the current status of the `dd` process, send the following signal:
 ```
 sudo kill -USR1 $(pgrep ^dd)
 ```
@@ -71,5 +71,5 @@ The following steps are necessary to configure the Beaglebone
 - Assign the appropriate IP adress in `/etc/network/interfaces` (from the `10.42.0.1xx` range)
 - configure the hostnames in `/etc/hosts`
 - update (and rebuild) the firmware
-- provide appropriate `.fbc` files
-- update `/etc/rc.local` to start the appropriate firmware
+- provide the appropriate `.fbc` files
+- install the appropriate script and systemd service to start the appropriate firmware
