@@ -101,6 +101,7 @@ CASU_Interface::CASU_Interface(char *fbc_file)
 
     temp_ref = 0.0;
     temp_ref_rec = 0.0;
+    temp_ref_ramp = 0.0;
     ramp_slope = 0.0;
 
     alpha = alphak1;
@@ -239,7 +240,7 @@ void CASU_Interface::i2cComm() {
     gettimeofday(&start_time, NULL);
     double t_msec;
     timeval current_time;
-    sprintf(str_buff, "time temp_f temp_r temp_b temp_l temp_top temp_pcb temp_casu temp_wax temp_ref pelt vibeAmp_s vibeFreq_s airfolow_s fanCool proxi_f proxi_fr proxi_br proxi_b proxi_bl proxi_fl alpha filtered_glitch\n");
+    sprintf(str_buff, "time temp_f temp_r temp_b temp_l temp_top temp_pcb temp_casu temp_wax temp_ref pelt vibeAmp_s vibeFreq_s airfolow_s fanCool proxi_f proxi_fr proxi_br proxi_b proxi_bl proxi_fl alpha filtered_glitch temp_ramp ramp_slope fft1a fft2a fft3a fft4a fft1f fft2f fft3f fft4f\n");
     log_file.write(str_buff, strlen(str_buff));
     log_file.flush();
 
@@ -248,6 +249,7 @@ void CASU_Interface::i2cComm() {
     // First loop slow to get temperature values
     int flag_first_loop_run = 1;
     int wait_until_all_set = 0;
+    float ramp_slope_received = -1.0;
 
     while(1) {
         gettimeofday(&tLoopStart, NULL);
@@ -392,6 +394,14 @@ void CASU_Interface::i2cComm() {
                 alpha = (inBuff[56] | (inBuff[57] << 8)) / 100.0;
                 filtered_glitch = inBuff[58];
 
+                ramp_slope_received = (inBuff[59] | (inBuff[60] << 8)) / 1000.0;
+
+                dummy = inBuff[61] | (inBuff[62] << 8);
+                if (dummy > 32767)
+                    temp_ref_ramp = (dummy - 65536.0) / 10.0;
+                else
+                    temp_ref_ramp = dummy / 10.0;
+
                 this->mtxPub_.unlock();
 
                 printf("temp f r b l TOP PCB RING WAX ref= ");
@@ -483,7 +493,7 @@ void CASU_Interface::i2cComm() {
         gettimeofday(&current_time, NULL);
         t_msec = (current_time.tv_sec - start_time.tv_sec) * 1000 + (current_time.tv_usec - start_time.tv_usec)/1000;
         //printf("I2C data processing time stamp %.3f \n", t_msec);
-        sprintf(str_buff, "%.2f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.2f %d %d %d %d %d %d %d %d %d %d %.2f %d\n", t_msec / 1000, temp[T_F], temp[T_L], temp[T_B], temp[T_R], temp[T_TOP], temp[T_PCB], temp[T_RING], temp[T_WAX], temp_ref_rec, ctlPeltier_s, vibeAmp_s, vibeFreq_s, airflow_r, fanCooler, irRawVals[IR_F], irRawVals[IR_FL], irRawVals[IR_BL], irRawVals[IR_B], irRawVals[IR_BR], irRawVals[IR_FR], alpha, filtered_glitch);
+        sprintf(str_buff, "%.2f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.2f %d %d %d %d %d %d %d %d %d %d %.2f %d %.1f %.5f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f\n", t_msec / 1000, temp[T_F], temp[T_L], temp[T_B], temp[T_R], temp[T_TOP], temp[T_PCB], temp[T_RING], temp[T_WAX], temp_ref_rec, ctlPeltier_s, vibeAmp_s, vibeFreq_s, airflow_r, fanCooler, irRawVals[IR_F], irRawVals[IR_FL], irRawVals[IR_BL], irRawVals[IR_B], irRawVals[IR_BR], irRawVals[IR_FR], alpha, filtered_glitch, temp_ref_ramp, ramp_slope_received, vAmp[A_F], vAmp[A_R], vAmp[A_B], vAmp[A_L], vFreq[A_F], vFreq[A_R], vFreq[A_B], vFreq[A_L]);
         log_file.write(str_buff, strlen(str_buff));
         log_file.flush();
 
@@ -894,10 +904,11 @@ void CASU_Interface::zmqSub()
                     if (temp_msg.has_slope()) {
                         ramp_slope = temp_msg.slope();
                         //cout << "Is inf " << isinf(ramp_slope) << endl;
-                        cout << "Slope: " << ramp_slope << endl;
+                        printf("\n\n\n\n Slope: %f \n\n\n\n", ramp_slope);
                     }
                     else {
                         ramp_slope = 0.025; // default slope - reference changes ramp_slope degrees/second
+                        printf("\n\n\n\n tmp_msg.has_slope() == false \n\n\n\n");
                     }
                     mtxSub_.unlock();
                     printf("Reference temperature %.1f \n", temp_ref);
@@ -915,7 +926,7 @@ void CASU_Interface::zmqSub()
                     if (tmp < 0) tmp = tmp + 65536;
                     out_i2c_buff[1] = (tmp & 0x00FF);
                     out_i2c_buff[2] = (tmp & 0xFF00) >> 8;
-                    tmp = ramp_slope * 1000;
+                    tmp = ramp_slope * 1000.0;
                     out_i2c_buff[3] = (tmp & 0x00FF);
                     out_i2c_buff[4] = (tmp & 0xFF00) >> 8;
                     this->mtxi2c_.lock();

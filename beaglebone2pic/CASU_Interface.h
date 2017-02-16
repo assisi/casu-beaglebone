@@ -207,7 +207,8 @@ private:
     int fanCooler; /*!< Latest PWM value (0,100) set to the fan which cools the PCB and aluminium cooler. */
 
     float temp_ref; /*!< Actual reference value for CASU temperature. */
-    float temp_ref_rec; /*!< Setted feference value for CASU temperature received from dsPIC. */
+    float temp_ref_rec; /*!< Set reference value for CASU temperature received from dsPIC. */
+    float temp_ref_ramp; /*!< Temperature setpoint limited through ramp as received from dsPIC. */
     float ramp_slope; /*!<Slope of the ramp limiter for temperature reference. If step reference ramp_slope = 0. */
     float alpha; /*!< Current value of SMC adaptive temperature controller parameter alpha. */
     int filtered_glitch; /*!< Flag - received temp_wax value was filtered on PIC before sending. */
