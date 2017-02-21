@@ -1,15 +1,15 @@
 # A Firmware Board Configuratoin (FBC) template file (yaml syntax)
 # Each firmware instance should be run with it's own FBC file
 # FBC naming convention: each beaglebone has 4 FBC files of format casu-00?.fbc:
-#	casu-001.fbc
-#	casu-002.fbc
-#	casu-003.fbc
-#	casu-004.fbc
+#    casu-001.fbc
+#    casu-002.fbc
+#    casu-003.fbc
+#    casu-004.fbc
 # ? used pub_addr, sub_addr, i2c_bus, and i2c_connector
 
 # Name of the CASU that the firmware instance is controlling
-# Casu names defined in Arena_layout_rectangle depending on which beaglebone 
-# they are connected. Casu name does not match fbc file name! 
+# Casu names defined in Arena_layout_rectangle depending on which beaglebone
+# they are connected. Casu name does not match fbc file name!
 name : casu-0xy
 
 # Address to publish sensor data from

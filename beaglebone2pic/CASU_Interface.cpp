@@ -25,7 +25,7 @@ using namespace boost::posix_time;
 using namespace boost::asio;
 
 CASU_Interface::CASU_Interface(char *fbc_file)
-    {
+{
 
     YAML::Node fbc = YAML::LoadFile(fbc_file);
     casuName = fbc["name"].as<string>();
@@ -61,21 +61,18 @@ CASU_Interface::CASU_Interface(char *fbc_file)
     ledDiag_r[L_B] = 0;
 
     // Initialize raw IR reading values
-    for (int i = 0; i <= IR_FR; i++)
-    {
+    for (int i = 0; i <= IR_FR; i++) {
         irRawVals[i] = 0;
     }
 
     // Initialize Temp reading and estimate values
-    for (int i = 0; i <= T_WAX; i++)
-    {
+    for (int i = 0; i <= T_WAX; i++) {
         temp[i] = 0.0;
         temp_old[i] = 0.0;
         index_filter[i] = 0;
     }
 
-    for (int i = 0; i <= A_R; i++)
-    {
+    for (int i = 0; i <= A_R; i++) {
         vAmp[i] = 0.0;
         vFreq[i] = 0.0;
     }
@@ -205,14 +202,14 @@ CASU_Interface::CASU_Interface(char *fbc_file)
 
     log_file.open(log_file_name.c_str(), ios::out);
 
-
     // Default period for checking for vibration pattern setpoints
     // is 1 second.
     timer_vp.reset(new deadline_timer(io, seconds(1)));
 
 }
 
-CASU_Interface::~CASU_Interface() {
+CASU_Interface::~CASU_Interface()
+{
     log_file.close();
     //delete ehm_device;
     delete zmqContext;
@@ -230,7 +227,8 @@ void CASU_Interface::run()
     threads.join_all();
 }
 
-void CASU_Interface::i2cComm() {
+void CASU_Interface::i2cComm()
+{
         //boost::interprocess::named_mutex i2cMuxLock(boost::interprocess::open_or_create, "i2cMuxLock" );
         //i2cMuxLock.unlock();
     int print_counter = 0;
@@ -382,7 +380,8 @@ void CASU_Interface::i2cComm() {
                 irRawVals[IR_FL] = inBuff[47] | (inBuff[48] << 8);
 
                 ctlPeltier_s = (inBuff[49] | (inBuff[50] << 8)) / 100.0;
-                if (ctlPeltier_s > 100) ctlPeltier_s = ctlPeltier_s - 201.0;
+                if (ctlPeltier_s > 100)
+                    ctlPeltier_s = ctlPeltier_s - 201.0;
 
                 ledDiag_s[L_R] = inBuff[51];
                 ledDiag_s[L_G] = inBuff[52];
@@ -571,7 +570,8 @@ void CASU_Interface::i2cComm() {
     }
 }
 
-void CASU_Interface::zmqPub() {
+void CASU_Interface::zmqPub()
+{
 
     zmq::socket_t zmqPub(*zmqContext, ZMQ_PUB);
     zmqPub.bind(pub_addr.c_str());
@@ -636,12 +636,10 @@ void CASU_Interface::zmqPub() {
             this->mtxPub_.lock();
             temp_ref.set_temp(this->temp_ref_rec);
             //temp_ref.set_temp(ctlPeltier_s);
-            if (this->temp_ref_rec < 26) // What is the meaning of 26?
-            {
+            if (this->temp_ref_rec < 26) {
                 act_state = "Off";
             }
-            else
-            {
+            else {
                 act_state = "On";
             }
             this->mtxPub_.unlock();
@@ -685,12 +683,10 @@ void CASU_Interface::zmqPub() {
         this->mtxPub_.lock();
         vib_ref.set_freq(vibeFreq_r);
         vib_ref.set_amplitude(vibeAmp_r);
-        if (vibeAmp_r == 0)
-        {
+        if (vibeAmp_r == 0) {
             act_state = "Off";
         }
-        else
-        {
+        else {
             act_state = "On";
         }
         this->mtxPub_.unlock();
@@ -703,36 +699,30 @@ void CASU_Interface::zmqPub() {
         /* Vibration pattern setpoint */
         VibrationPattern vibe_pattern;
         this->mtxPub_.lock();
-        for (int i = 0; i < vibe_periods.size(); i++)
-        {
+        for (int i = 0; i < vibe_periods.size(); i++) {
             vibe_pattern.add_vibe_periods(vibe_periods[i]);
             vibe_pattern.add_vibe_freqs(vibe_freqs[i]);
             vibe_pattern.add_vibe_amps(vibe_amps[i]);
         }
-        if (vibe_pattern_on)
-        {
+        if (vibe_pattern_on) {
             act_state = "On";
         }
-        else
-        {
+        else {
             act_state = "Off";
         }
         this->mtxPub_.unlock();
         this->set_msg_header(vibe_pattern.mutable_header());
         vibe_pattern.SerializeToString(&data);
-        zmq::send_multipart(zmqPub, casuName.c_str(), "VibrationPattern",
-                            act_state.c_str(), data);
+        zmq::send_multipart(zmqPub, casuName.c_str(), "VibrationPattern", act_state.c_str(), data);
 
     /* Airflow actuator setpoint */
     Airflow air_ref;
     this->mtxPub_.lock();
     air_ref.set_intensity(1);
-    if (airflow_r)
-    {
+    if (airflow_r) {
         act_state = "On";
     }
-    else
-    {
+    else {
         act_state = "Off";
     }
     this->mtxPub_.unlock();
@@ -748,12 +738,10 @@ void CASU_Interface::zmqPub() {
     color_ref.mutable_color()->set_red(ledDiag_r[L_R]/100.0);
     color_ref.mutable_color()->set_green(ledDiag_r[L_G]/100.0);
     color_ref.mutable_color()->set_blue(ledDiag_r[L_B]/100.0);
-    if (ledDiag_r[L_R] || ledDiag_r[L_G] || ledDiag_r[L_B])
-    {
+    if (ledDiag_r[L_R] || ledDiag_r[L_G] || ledDiag_r[L_B]) {
         act_state = "On";
     }
-    else
-    {
+    else {
         act_state = "Off";
     }
     this->mtxPub_.unlock();
@@ -769,7 +757,6 @@ void CASU_Interface::zmqPub() {
 
 void CASU_Interface::zmqSub()
 {
-
 
     zmq::socket_t zmqPub_af(*zmqContext, ZMQ_PUB);
     zmqPub_af.connect(pub_addr_af.c_str());
@@ -795,8 +782,7 @@ void CASU_Interface::zmqSub()
 
             if (device == "DiagnosticLed") {
 
-                if (command == "On")
-                {
+                if (command == "On") {
                     AssisiMsg::ColorStamped color_msg;
                     assert(color_msg.ParseFromString(data));
                     mtxSub_.lock();
@@ -805,16 +791,14 @@ void CASU_Interface::zmqSub()
                     ledDiag_r[L_B] = 100 * color_msg.color().blue();
                     mtxSub_.unlock();
                 }
-                else if (command == "Off")
-                {
+                else if (command == "Off") {
                     mtxSub_.lock();
                     ledDiag_r[L_R] = 0;
                     ledDiag_r[L_G] = 0;
                     ledDiag_r[L_B] = 0;
                     mtxSub_.unlock();
                 }
-                else
-                {
+                else {
                     cerr << "Unknown command for " << name << "/" << device << endl;
                 }
 
@@ -832,8 +816,7 @@ void CASU_Interface::zmqSub()
 
                 printf("Received speaker command: %s", command.data());
 
-                if (command == "On")
-                {
+                if (command == "On") {
                     AssisiMsg::VibrationSetpoint vibe;
                     assert(vibe.ParseFromString(data));
                     // We've received a vibration setpoint
@@ -849,12 +832,10 @@ void CASU_Interface::zmqSub()
                 }
 
             }
-            else if (device == "VibrationPattern")
-            {
+            else if (device == "VibrationPattern") {
                 AssisiMsg::VibrationPattern vp;
 
-                if (command == "On")
-                {
+                if (command == "On") {
                     assert(vp.ParseFromString(data));
                     // Check that the sizes of all fields match
                     assert((vp.vibe_periods_size() == vp.vibe_freqs_size())
@@ -864,8 +845,7 @@ void CASU_Interface::zmqSub()
                     vibe_periods.clear();
                     vibe_freqs.clear();
                     vibe_amps.clear();
-                    for (int i = 0; i < vp.vibe_periods_size(); i++)
-                    {
+                    for (int i = 0; i < vp.vibe_periods_size(); i++) {
                         vibe_periods.push_back(clamp(vp.vibe_periods(i),VIBE_PATTERN_PERIOD_MIN,UINT_MAX));
                         vibe_freqs.push_back(vp.vibe_freqs(i));
                         vibe_amps.push_back(vp.vibe_amps(i));
@@ -880,8 +860,7 @@ void CASU_Interface::zmqSub()
                       This simplifies our code, but can be changed if necessary.
                     */
                 }
-                else
-                {
+                else {
                     cerr << "Unknown command " << command << " for " << name << "/" << device << endl;
                 }
                 mtxSub_.unlock();
@@ -891,7 +870,7 @@ void CASU_Interface::zmqSub()
                 printf("Received EM device message: %s\n \
                        ...Discarding message as we are now longer using electro-magnetic emitters", command.data());
             }
-            // TODO add second parameter - ramp_slope; also add to assisimsg & assisipy & arena-ui
+
             else if (device == "Peltier") {
                 printf("Received Peltier device message: %s\n", command.data());
                 if (command == "On") {
@@ -973,8 +952,7 @@ void CASU_Interface::zmqSub()
                 status = i2cPIC.sendData(out_i2c_buff, 2);
                 this->mtxi2c_.unlock();
             }
-            else
-            {
+            else {
                 cerr << "Unknown device " << device << endl;
             }
 
@@ -991,12 +969,10 @@ void CASU_Interface::set_vibration(double freq, double amp)
     vibeAmp_r = clamp(static_cast<unsigned>(amp), 0U, VIBE_AMP_MAX);
     // This check is necessary because of a possible race condition
     // between update_vibration_pattern() and stop_vibration()
-    if (vibeAmp_r > 0)
-    {
+    if (vibeAmp_r > 0) {
         vibration_on = true;
     }
-    else
-    {
+    else {
         vibration_on = false;
     }
     mtxSub_.unlock();
@@ -1041,20 +1017,16 @@ void CASU_Interface::stop_vibration()
 void CASU_Interface::update_vibration_pattern()
 {
     mtxSub_.lock();
-    if (vibe_pattern_on)
-    {
+    if (vibe_pattern_on) {
         vibeFreq_r = vibe_freqs[vibe_pattern_idx];
         vibeAmp_r = vibe_amps[vibe_pattern_idx];
         timer_vp->expires_from_now(milliseconds(vibe_periods[vibe_pattern_idx]));
         vibe_pattern_idx++;
-        if (vibe_pattern_idx >= vibe_freqs.size())
-        {
+        if (vibe_pattern_idx >= vibe_freqs.size()) {
             vibe_pattern_idx = 0;
         }
     }
-    else
-    {
-
+    else {
         timer_vp->expires_from_now(seconds(1));
     }
     mtxSub_.unlock();

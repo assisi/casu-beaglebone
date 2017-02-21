@@ -151,7 +151,7 @@ Exit the root shell with `exit` or by pressing Ctrl-D.
         cat .ssh/id_rsa.pub | ssh assisi@bbg-0xy 'cat >> .ssh/authorized_keys'
 
  You can also install the `clusterssh` package, which enables you to simultaneously connect and send keystrokes to multiple beaglebones. After installing, create a file named `clusters` in `~/.clusterssh`, and define a cluster. For example, to define a cluster named `bbs` consisting of 3 Beaglebones, add the following line:
- 
+
       bbs 10.42.0.110 10.42.0.111 bbg-012
 
  To connect to all machines in the cluster bbs, invoke `cssh bbs`.
@@ -184,7 +184,7 @@ Exit the root shell with `exit` or by pressing Ctrl-D.
         ##Example v4.1.x
         #cape_disable=bone_capemgr.disable_partno=
         cape_enable=bone_capemgr.enable_partno=BB-I2C1
-  
+
       e. Run the following script to apply the changes.
 
         /opt/scripts/tools/developers/update_initrd.sh
@@ -206,7 +206,7 @@ Exit the root shell with `exit` or by pressing Ctrl-D.
         cd casu-beaglebone
         git remote set-url origin https://github.com/assisi/casu-beaglebone
         git submodule update --init
-      
+
 3. Compile the firmware
 
         cd /home/assisi/casu-beaglebone
@@ -216,7 +216,7 @@ Exit the root shell with `exit` or by pressing Ctrl-D.
         make
         cp beaglebone2pic/casu-fw /home/assisi/firmware
         cp ../config/bbg-0xy/casu-00* /home/assisi/firmware
-          
+
 4. Update `rc.local`.
 
         #!/bin/sh -e
@@ -250,17 +250,18 @@ The following steps will setup the Beaglebone to update date and time on startup
         sudo apt purge ntp ntpdate
 
 2. Install the `systemd-timesyncd-wait.service` addon for systemd, which provides a service that enters the finished state only when `systemd-timesyncd` successfully synchronizes the time and date with an NTP server.
- 
+
         sudo apt install golang
         cd /home/assisi
         git clone https://github.com/assisi/systemd-timesyncd-wait
+        cd systemd-timesyncd-wait
         make
         sudo make install
 
  Afterwards, you can remove the Go language packages to save space:
 
-      sudo apt remove golang
-      sudo apt autoremove
+        sudo apt remove golang
+        sudo apt autoremove
 
 3. Create a service file named `setdate-initfirmware.service` in `/etc/systemd/system`, with the following contents
 
@@ -280,7 +281,7 @@ The following steps will setup the Beaglebone to update date and time on startup
 
         sudo systemctl daemon-reload
         sudo systemctl enable setdate-initfirmware.service
-          
+
 5. Create a script file called `/home/assisi/.fw_run.sh`, with the following contents. Adjust the connected CASUs by modifying the `USE_CASUS` list.
 
         #!/bin/bash
@@ -303,7 +304,7 @@ The following steps will setup the Beaglebone to update date and time on startup
 6.  Set the executable bit on the script.
 
         chmod +x /home/assisi/.fw_run.sh
-        
+
 ### Setting up CASU Firmware Status Display on Startup
 
 It can be useful to add a status display that is run at the beginning of the ssh session, which helps verify that the correct time and date have been set and that the CASU firmware has been launched. To do so, open `/home/assisi/.bashrc` and append the following to the end of the file:
@@ -318,7 +319,7 @@ It can be useful to add a status display that is run at the beginning of the ssh
         echo 'Press CTRL-C to dismiss'
       "
     fi
-  
+
 ## Locale Warnings
 
 If a warning like the following shows up during package installation or similar operations:
@@ -366,7 +367,7 @@ It can be beneficial to install a newer Linux Kernel on the Beaglebone. To do th
     cd ti-linux-kernel-dev
     git checkout origin/ti-linux-4.4.y -b tmp
     ./build_deb.sh
-  
+
 Copy the resulting `linux-firmware-...deb`, `linux-image...deb`, and `linux-libc...deb` files to the Beaglebone (e.g. `scp -r folder_with_deb_files assisi@bbg-0xy`. On the Beaglebone, install the new kernel with the command `sudo dpkg -i *.deb` while in the directory where the copied `.deb` packages are located.
 
 ## Enabling the RTC Clock
@@ -406,7 +407,7 @@ Also check:
 The output should be:
 
     x 11 Feb 2016 HH:MM:SS PM UTC  .000000 seconds
-  
+
 Also check:
 
     hwclock -r -f /dev/rtc0

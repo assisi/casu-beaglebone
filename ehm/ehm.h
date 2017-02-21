@@ -9,7 +9,7 @@
 
 /*! \brief Command for initializing communication with EHM control board.
  */
-#define INIT_COMM	"1h2h"
+#define INIT_COMM "1h2h"
 
 /*! \brief Command for reading current parameters of EHM control board.
  */
@@ -25,11 +25,11 @@
 
 /*! \brief Command for turning voltage regulator (40 V) on.
  */
-#define V40_ON	"001c"
+#define V40_ON "001c"
 
 /*! \brief Command for turning voltage regulator (40 V) off.
  */
-#define V40_OFF	"000c"
+#define V40_OFF "000c"
 
 /*! \brief Command for turning low frequency modulator on.
  */
@@ -103,76 +103,76 @@
 class EHM : Serial {
 public:
 
-	/*! \brief Constructor. Initializes a serial port and sets its baud rate.
-	 *
-	 *@param port Name of the serial port.
-	 *@param baudRate Serial communication baud rate.
-	 */
-	EHM(char *port, int baudRate);
+    /*! \brief Constructor. Initializes a serial port and sets its baud rate.
+     *
+     *@param port Name of the serial port.
+     *@param baudRate Serial communication baud rate.
+     */
+    EHM(char *port, int baudRate);
 
-	/*!\brief Destructor.
-	 */
-	virtual ~EHM();
+    /*!\brief Destructor.
+     */
+    virtual ~EHM();
 
-	/*! \brief Method reads and prints on standard output current parameter values of EHM control board.
-	 *
-	 * @return 1 - parameters successfully read \n
-	 * 		  -1 - failed to open serial port, parameters not read
-	 */
-	int readParams();
+    /*! \brief Method reads and prints on standard output current parameter values of EHM control board.
+     *
+     * @return 1 - parameters successfully read \n
+     *         -1 - failed to open serial port, parameters not read
+     */
+    int readParams();
 
-	/*! \brief Method initializes EHM control board for heat generation.
-	 *
-	 *@return 1 - EHM board successfully initialized \n
-	 * 		  -1 - failed to open serial port, board not initialized
-	 */
-	int initHeating();
+    /*! \brief Method initializes EHM control board for heat generation.
+     *
+     *@return 1 - EHM board successfully initialized \n
+     *        -1 - failed to open serial port, board not initialized
+     */
+    int initHeating();
 
-	/*! \brief Method initializes EHM control board for electric field generation.
-	 *
-	 *@return 1 - EHM board successfully initialized \n
-	 * 		  -1 - failed to open serial port, board not initialized
-	 */
-	int initEField();
+    /*! \brief Method initializes EHM control board for electric field generation.
+     *
+     *@return 1 - EHM board successfully initialized \n
+     *        -1 - failed to open serial port, board not initialized
+     */
+    int initEField();
 
-	/*! \brief Method initializes EHM control board for magnetic field generation.
-	 *
-	 *@return 1 - EHM board successfully initialized \n
-	 * 		  -1 - failed to open serial port, board not initialized
-	 */
-	int initMField();
+    /*! \brief Method initializes EHM control board for magnetic field generation.
+     *
+     *@return 1 - EHM board successfully initialized \n
+     *        -1 - failed to open serial port, board not initialized
+     */
+    int initMField();
 
-	/*! \brief Method sets PWM duty cycle value for magnetic actuator used as a heater.
-	 *
-	 *@param dutyCycle Duty cycle (0-100) of PWM signal used for heater control
-	 *@return 1 - parameter successfully set \n
-	 * 		 -1 - failed to open serial port, parameter not set
-	 */
-	int setHeaterPwm(int dutyCycle);
+    /*! \brief Method sets PWM duty cycle value for magnetic actuator used as a heater.
+     *
+     *@param dutyCycle Duty cycle (0-100) of PWM signal used for heater control
+     *@return 1 - parameter successfully set \n
+     *        -1 - failed to open serial port, parameter not set
+     */
+    int setHeaterPwm(int dutyCycle);
 
-	/*! \brief Method sets magnetic field frequency.
-	 *
-	 *@param freq Magnetic field frequency.
-	 *@return 1 - parameter successfully set \n
-	 * 		 -1 - failed to open serial port, parameter not set
-	 */
-	int setMFieldFreq(int freq);
+    /*! \brief Method sets magnetic field frequency.
+     *
+     *@param freq Magnetic field frequency.
+     *@return 1 - parameter successfully set \n
+     *        -1 - failed to open serial port, parameter not set
+     */
+    int setMFieldFreq(int freq);
 
-	/*! \brief Method sets electric field frequency.
-	 *
-	 *@param freq Electric field frequency.
-	 *@return 1 - parameter successfully set \n
-	 * 		 -1 - failed to open serial port, parameter not set
-	 */
-	int setEFieldFreq(int freq);
+    /*! \brief Method sets electric field frequency.
+     *
+     *@param freq Electric field frequency.
+     *@return 1 - parameter successfully set \n
+     *        -1 - failed to open serial port, parameter not set
+     */
+    int setEFieldFreq(int freq);
 
-	/*! \brief Method turns off all EHM board devices.
-	 *
-	 * Turns off voltage regulators and driver circuits.
-	 *@return 1 - parameter successfully set \n
-	 * 		 -1 - failed to open serial port, parameter not set
-	 */
-	int moduleOff();
+    /*! \brief Method turns off all EHM board devices.
+     *
+     * Turns off voltage regulators and driver circuits.
+     *@return 1 - parameter successfully set \n
+     *        -1 - failed to open serial port, parameter not set
+     */
+    int moduleOff();
 };
 
 #endif /* EHM_H */

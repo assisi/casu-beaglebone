@@ -14,7 +14,7 @@ using namespace std;
 /*! \brief Main function of the CASU interface between MCU and user controller.
  *
  *  An .fbc file *MUST* be provided as the only argument when invoking the program:
- *  
+ *
  *  casu-fw <firmware board config>.fbc
  *
  *  Instantiates CASU_Interface and creates three threads for:
@@ -34,5 +34,5 @@ int main(int argc, char **argv) {
 
     casu.run();
 
-	return 0;
+    return 0;
 }

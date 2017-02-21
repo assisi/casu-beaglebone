@@ -15,30 +15,10 @@
 # Sync with real-time clock
 #source  /usr/share/rtc_ds1307/clock_init.sh
 
-# Start CASU firmware
-
 sleep 0.25
 
+# Set mux mask 
 i2cset -y 2 0x70 0x00 0xF
-
-sleep 0.25
-
-# stdout and stderr redirected to /dev/null - temporary workaround!
-# Should solve problem and later use:
-# /home/assisi/firmware/casu-fw /home/assisi/firmware/casu-021.fbc &
-/home/assisi/firmware/casu-fw /home/assisi/firmware/casu-001.fbc > /dev/null 2>&1 &
-
-sleep 0.25
-
-/home/assisi/firmware/casu-fw /home/assisi/firmware/casu-002.fbc > /dev/null 2>&1 &
-
-sleep 0.25
-
-/home/assisi/firmware/casu-fw /home/assisi/firmware/casu-003.fbc > /dev/null 2>&1 &
-
-sleep 0.25
-
-/home/assisi/firmware/casu-fw /home/assisi/firmware/casu-004.fbc > /dev/null 2>&1 &
 
 sleep 0.25
 

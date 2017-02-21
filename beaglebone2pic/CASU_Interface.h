@@ -187,7 +187,7 @@ private:
     I2C_Device mux;
     I2C_SlaveMCU i2cPIC; /*!< Used for i2c communication with CASU MCU. */
 
-    EHM *ehm_device;	 /*!< Used for serial communication with electro-magnetic emitter control board. */
+    EHM *ehm_device;     /*!< Used for serial communication with electro-magnetic emitter control board. */
 
     char outBuff[20]; /*!< Buffer for i2c outgoing data.  */
     char inBuff[IN_DATA_NUM_SLOW]; /*!< Buffer for i2c incoming data. */
