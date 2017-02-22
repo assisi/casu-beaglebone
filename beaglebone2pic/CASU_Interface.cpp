@@ -74,6 +74,7 @@ CASU_Interface::CASU_Interface(char *fbc_file)
 
     for (int i = 0; i <= A_R; i++) {
         vAmp[i] = 0.0;
+        vAmpBinary[i] = 0.0;
         vFreq[i] = 0.0;
     }
 
@@ -364,6 +365,15 @@ void CASU_Interface::i2cComm()
                 vAmp[A_B] = (inBuff[22] | (inBuff[23] << 8)) / 10.0;
                 vAmp[A_L] = (inBuff[24] | (inBuff[25] << 8)) / 10.0;
 
+                for (int i = 0; i < 4; i++) {
+                    if (vAmp[i] >= MIN_FFT_AMP) {
+                        vAmpBinary[i] = 1.0;
+                    }
+                    else {
+                        vAmpBinary[i] = 0.0;
+                    }
+                }
+
                 vFreq[A_F] = (inBuff[26] | (inBuff[27] << 8));
                 vFreq[A_R] = (inBuff[28] | (inBuff[29] << 8));
                 vFreq[A_B] = (inBuff[30] | (inBuff[31] << 8));
@@ -461,6 +471,15 @@ void CASU_Interface::i2cComm()
                 vAmp[A_R] = (inBuff[2] | (inBuff[3] << 8)) / 10.0;
                 vAmp[A_B] = (inBuff[4] | (inBuff[5] << 8)) / 10.0;
                 vAmp[A_L] = (inBuff[6] | (inBuff[7] << 8)) / 10.0;
+
+                for (int i = 0; i < 4; i++) {
+                    if (vAmp[i] >= MIN_FFT_AMP) {
+                        vAmpBinary[i] = 1.0;
+                    }
+                    else {
+                        vAmpBinary[i] = 0.0;
+                    }
+                }
 
     //            vFreq[A_F] = (inBuff[26] | (inBuff[27] << 8)) / 10.0;
     //            vFreq[A_R] = (inBuff[28] | (inBuff[29] << 8)) / 10.0;
@@ -663,7 +682,7 @@ void CASU_Interface::zmqPub()
             this->mtxPub_.lock();
             vibe = vibes.add_reading();
             for(int i = 0; i < IN_DATA_NUM_ACC; i++) {
-                vibe->add_amplitude(vAmp[i]);
+                vibe->add_amplitude(vAmpBinary[i]);
                 vibe->add_freq(vFreq[i]);
             }
 
@@ -846,7 +865,7 @@ void CASU_Interface::zmqSub()
                     vibe_freqs.clear();
                     vibe_amps.clear();
                     for (int i = 0; i < vp.vibe_periods_size(); i++) {
-                        vibe_periods.push_back(clamp(vp.vibe_periods(i),VIBE_PATTERN_PERIOD_MIN,UINT_MAX));
+                        vibe_periods.push_back(clamp(vp.vibe_periods(i), VIBE_PATTERN_PERIOD_MIN, UINT_MAX));
                         vibe_freqs.push_back(vp.vibe_freqs(i));
                         vibe_amps.push_back(vp.vibe_amps(i));
                     }
@@ -859,6 +878,9 @@ void CASU_Interface::zmqSub()
                       which is currently set to 1s.
                       This simplifies our code, but can be changed if necessary.
                     */
+                }
+                else if (command == "Off") {
+                    stop_vibration();
                 }
                 else {
                     cerr << "Unknown command " << command << " for " << name << "/" << device << endl;
@@ -883,14 +905,11 @@ void CASU_Interface::zmqSub()
                     if (temp_msg.has_slope()) {
                         ramp_slope = temp_msg.slope();
                         //cout << "Is inf " << isinf(ramp_slope) << endl;
-                        printf("\n\n\n\n Slope: %f \n\n\n\n", ramp_slope);
                     }
                     else {
                         ramp_slope = 0.025; // default slope - reference changes ramp_slope degrees/second
-                        printf("\n\n\n\n tmp_msg.has_slope() == false \n\n\n\n");
                     }
                     mtxSub_.unlock();
-                    printf("Reference temperature %.1f \n", temp_ref);
                 }
                 else if (command == "Off") {
                     mtxSub_.lock();
@@ -980,7 +999,7 @@ void CASU_Interface::set_vibration(double freq, double amp)
     // Send vibration command over i2c
     char out_i2c_buff[4];
     out_i2c_buff[0] = MSG_REF_VIBE_ID;
-    out_i2c_buff[1] =  vibeAmp_r;
+    out_i2c_buff[1] = vibeAmp_r;
     out_i2c_buff[2] = vibeFreq_r & 0x00FF;
     out_i2c_buff[3] = (vibeFreq_r & 0xFF00) >> 8;
     this->mtxi2c_.lock();
@@ -1006,7 +1025,7 @@ void CASU_Interface::stop_vibration()
     // Send vibration command over i2c
     char out_i2c_buff[4];
     out_i2c_buff[0] = MSG_REF_VIBE_ID;
-    out_i2c_buff[1] =  vibeAmp_r;
+    out_i2c_buff[1] = vibeAmp_r;
     out_i2c_buff[2] = vibeFreq_r & 0x00FF;
     out_i2c_buff[3] = (vibeFreq_r & 0xFF00) >> 8;
     this->mtxi2c_.lock();
@@ -1050,10 +1069,11 @@ void CASU_Interface::periodic_jobs()
 {
     // We'll just set up the necessary timers and
     // run the boost::asio::io_service loop
-    timer_vp->async_wait(boost::bind(&CASU_Interface::update_vibration_pattern,this));
+    timer_vp->async_wait(boost::bind(&CASU_Interface::update_vibration_pattern, this));
     io.run();
 }
 
 /* static */ const double CASU_Interface::VIBE_FREQ_MAX = 1500.0;
 /* static */ const unsigned CASU_Interface::VIBE_AMP_MAX = 50;
 /* static */ const unsigned CASU_Interface::VIBE_PATTERN_PERIOD_MIN = 100;
+/* static */ const double CASU_Interface::MIN_FFT_AMP = 20.0;

@@ -129,9 +129,11 @@ public:
     /*! \brief Maximum vibration amplitude */
     static const unsigned VIBE_AMP_MAX;
 
-    /*! \brief Minimm vibration pattern period, in milliseconds */
+    /*! \brief Minimum vibration pattern period, in milliseconds */
     static const unsigned VIBE_PATTERN_PERIOD_MIN;
 
+    /*! \brief Minimum FFT amplitude considered as recorded vibration*/
+    static const double MIN_FFT_AMP;
     /*! Main CASU communication loop
       Starts all communication and periodic job threads.
     */
@@ -199,6 +201,7 @@ private:
     float temp_old[8];
     int index_filter[8];
     float vAmp[IN_DATA_NUM_ACC]; /*!< Array containing latest vibration amplitude values from four sensors. */
+    float vAmpBinary[IN_DATA_NUM_ACC]; /*!< Array containing flags if vibration was detected - if amplitude is above threshold MIN_FFT_AMP. */
     float vFreq[IN_DATA_NUM_ACC]; /*!< Array containing latest vibration frequency values from four sensors. */
     int irRawVals[6]; /*!< Array containing latest infra-red proximity values from seven sensors. */
     int ledDiag_s[3]; /*!< Array containing latest red, green and blue PWM values (0-100) of LED used as diagnostic light. */
