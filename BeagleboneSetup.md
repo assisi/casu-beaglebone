@@ -5,7 +5,8 @@ These instructions are intended for installation and setup of a Beaglebone Green
 
 ### Contents
 
-  1. [Ubuntu 16.04 Installation](#ubuntu-1604-installation)
+  1. [Flashing a Configured System Image](#flashing-a-configured-system-image)
+  2. [Ubuntu 16.04 Installation](#ubuntu-1604-installation)
     1. [Image Download and SD Card Preparation](#image-download-and-sd-card-preparation)
     2. [Flashing the Image to Beaglebone](#flashing-the-image-to-beaglebone)
   3. [Resizing the Image Partition](#resizing-the-image-partition)
@@ -19,8 +20,37 @@ These instructions are intended for installation and setup of a Beaglebone Green
   7. [Building the Linux Kernel](#building-the-linux-kernel)
   8. [Enabling the RTC Clock](#enabling-the-rtc-clock)
 
+## Flashing a Configured System Image
+
+If you do not have an already configured image, skip to [Ubuntu 16.04 Installation](#ubuntu-1604-installation).
+
+  1. Insert the microSD card into the Beaglebone microSD slot
+  2. Plug the Beaglebone to power source (e.g. via microUSB cable).
+  3. Wait until LEDs stop blinking.
+  4. Unplug from power, remove microSD and plug into power.
+  5. Connect to the board (over LAN) via SSH from a terminal under user _assisi_. The default board IP is 10.42.0.120. The default password for the image is _assisi_.
+
+          ssh assisi@10.42.0.120
+
+  6. Edit `/etc/network/interfaces` (as root). Replace 120 in IP address with your board number (e.g. `08`, `11`).
+  7. Change hostname in `/etc/hostname` (as root) into _bbg-0xy_ (replace 20 with your board number). Reboot the board and reconnect.
+  8. Copy the right CASU configuration files to _firmware_ folder (replace xy with your board number).
+
+          cp /home/assisi/casu-beaglebone/config/bbg-0xy/casu-00* /home/assisi/firmware
+
+  9. Uncomment the following line in `/home/assisi/.fw_run.sh`
+
+          #/home/assisi/firmware/casu-fw /home/assisi/firmware/casu-00$i.fbc > /dev/null 2>&1 &
+
+  10. Optionally, to setup passwordless login, execute on the host machine:
+
+          ssh assisi@bbg-0xy mkdir -p .ssh
+          cat .ssh/id_rsa.pub | ssh assisi@bbg-0xy 'cat >> .ssh/authorized_keys'
+
+
 ## Ubuntu 16.04 Installation
-If you already have prepared a microSD card, skip to [Flashing the Image to Beaglebone](#flashing-the-image-to-beaglebone).
+
+If you have prepared a microSD card with a Ubuntu image, skip to [Flashing the Image to Beaglebone](#flashing-the-image-to-beaglebone).
 
 ### Image Download and SD Card Preparation
 
