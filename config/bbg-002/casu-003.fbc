@@ -10,7 +10,7 @@
 # Name of the CASU that the firmware instance is controlling 
 # Casu names defined in Arena_layout_rectangle depending on which beaglebone 
 # they are connected. Casu name does not match fbc file name! 
-name : casu-009
+name : casu-002
  
 # Address to publish sensor data from 
 # * means "bind to all interfaces" 

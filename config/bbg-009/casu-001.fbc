@@ -1,65 +1,77 @@
-# A Firmware Board Configuratoin (FBC) template file (yaml syntax)
-# Each firmware instance should be run with it's own FBC file
-
-# Name of the CASU that the firmware instance is controlling
-name : casu-018
-
-# Address to publish sensor data from
-# * means "bind to all interfaces"
-# this corresponds to the "sub_addr" in RTC files
-pub_addr : tcp://*:1555
-
-# Address from which actuator commands are read
-# Corresponds to the "pub_addr" in RTC files
-sub_addr : tcp://*:1556
-
-# The number of I2C bus on beaglebone being used for communication.
-i2c_bus : 2
-
-# Hardware address on I2C bus
-i2c_addr : 0x11
-
-# I2C connector on bbg
-i2c_connector : 1
-
-# Flag determines if temp control will run, 1 - on, 0 - off
-tempCtlOn : 1
-
-# Proportional gain of PI controller
-Kp : 10
-
-# Integral gain of PI controller
-Ki : 0.115
-
-# Weight of current casu ring in computation of discrete PT1 filter for wax tem$
-Kf1 : 0.1029
-
-# Weight of old casu ring temp in computation of PT1 filter for wax temperature$
-Kf2 : 0.1029
-
-# Weight of old wax temp in computation of discrete PT1 filter for wax temperat$
-Kf3 : 0.7893
-
-# Flag determines if fan for cooling casu will runn, 1 - on, 0 - off
-fanCtlOn : 1
-
-# 0 = PI; 1 = SMC
-controller_type : 1
-
-# Derivative gain
-C1_sigma : 1.0
-
-# Derivative gain in alpha adaptation
-C2_sigma_m : 1.0
-
-# Alpha adaptation speed
-K1_alpha : 0.01
-
-# Beta / alpha relation
-K2_beta : 0.01
-
-# Deadzone for sigma_m
-epsilon : 0.3
-
-# Alpha initial condition
-alphak1 : 7.0
+# A Firmware Board Configuratoin (FBC) template file (yaml syntax) 
+# Each firmware instance should be run with it's own FBC file 
+# FBC naming convention: each beaglebone has 4 FBC files of format casu-00?.fbc: 
+#    casu-001.fbc 
+#    casu-002.fbc 
+#    casu-003.fbc 
+#    casu-004.fbc 
+# ? used pub_addr, sub_addr, i2c_bus, and i2c_connector 
+ 
+# Name of the CASU that the firmware instance is controlling 
+# Casu names defined in Arena_layout_rectangle depending on which beaglebone 
+# they are connected. Casu name does not match fbc file name! 
+name : casu-011
+ 
+# Address to publish sensor data from 
+# * means "bind to all interfaces" 
+# this corresponds to the "sub_addr" in RTC files 
+# ? determined from the fbc name (casu-001.fbc > ? = 1) 
+pub_addr : tcp://*:1555 
+ 
+# Address from which actuator commands are read 
+# Corresponds to the "pub_addr" in RTC files 
+# ? determined from the fbc name (casu-001.fbc > ? = 1) 
+sub_addr : tcp://*:1556 
+ 
+# The number of I2C bus on beaglebone being used for communication. 
+# ? = {1, 2} > i2c_bus : 2; ? = {3, 4} > i2c_bus : 1 
+i2c_bus : 2 
+ 
+# Hardware address on I2C bus 
+i2c_addr : 0x11 
+ 
+# I2C connector on bbg 
+# ? corresponds to number in filename 
+i2c_connector : 1 
+ 
+# Flag determines if temp control will run, 1 - on, 0 - off 
+tempCtlOn : 1 
+ 
+# Proportional gain of PI controller 
+Kp : 10 
+ 
+# Integral gain of PI controller 
+Ki : 0.115 
+ 
+# Weight of current casu ring in computation of discrete PT1 filter for wax tem$ 
+Kf1 : 0.1029 
+ 
+# Weight of old casu ring temp in computation of PT1 filter for wax temperature$ 
+Kf2 : 0.1029 
+ 
+# Weight of old wax temp in computation of discrete PT1 filter for wax temperat$ 
+Kf3 : 0.7893 
+ 
+# Flag determines if fan for cooling casu will runn, 1 - on, 0 - off 
+fanCtlOn : 1 
+ 
+# 0 = PI; 1 = SMC 
+controller_type : 1 
+ 
+# Derivative gain 
+C1_sigma : 1.0 
+ 
+# Derivative gain in alpha adaptation 
+C2_sigma_m : 1.0 
+ 
+# Alpha adaptation speed 
+K1_alpha : 0.01 
+ 
+# Beta / alpha relation 
+K2_beta : 0.01 
+ 
+# Deadzone for sigma_m 
+epsilon : 0.3 
+ 
+# Alpha initial condition 
+alphak1 : 7.00 
